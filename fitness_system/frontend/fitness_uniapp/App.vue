@@ -1,0 +1,222 @@
+<script>
+export default {
+  onLaunch() {
+    console.log('Fitness Pro Launch')
+  }
+}
+</script>
+
+<style>
+page {
+  background: #f5f7fb;
+  color: #1f2937;
+  font-size: 28rpx;
+}
+view, text, input, button {
+  box-sizing: border-box;
+}
+.container {
+  padding: 24rpx;
+}
+.hero-card {
+  padding: 32rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  color: #ffffff;
+  box-shadow: 0 12rpx 30rpx rgba(79, 70, 229, 0.18);
+  margin-bottom: 24rpx;
+}
+.page-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  margin-bottom: 10rpx;
+}
+.page-desc {
+  font-size: 24rpx;
+  opacity: 0.88;
+  line-height: 1.6;
+}
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.05);
+}
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 20rpx;
+}
+.section-subtitle {
+  font-size: 24rpx;
+  color: #6b7280;
+  margin-top: -8rpx;
+  margin-bottom: 20rpx;
+}
+.label {
+  font-size: 24rpx;
+  color: #6b7280;
+  margin-bottom: 10rpx;
+}
+.input {
+  width: 100%;
+  height: 88rpx;
+  border-radius: 18rpx;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 0 22rpx;
+  margin-bottom: 18rpx;
+}
+.btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 18rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: #ffffff;
+  font-weight: 600;
+  margin-top: 8rpx;
+}
+.btn-light {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+.btn-green {
+  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+  color: #ffffff;
+}
+.btn-orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: #ffffff;
+}
+.btn-danger {
+  background: linear-gradient(135deg, #f43f5e 0%, #ef4444 100%);
+  color: #ffffff;
+}
+.grid-2 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.grid-item-2 {
+  width: 48.5%;
+}
+.grid-4 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.grid-item-4 {
+  width: 23%;
+}
+.quick-item {
+  background: #f8fafc;
+  border-radius: 20rpx;
+  padding: 20rpx 14rpx;
+  text-align: center;
+  margin-bottom: 16rpx;
+}
+.quick-icon {
+  font-size: 38rpx;
+  margin-bottom: 12rpx;
+}
+.quick-text {
+  font-size: 22rpx;
+  color: #374151;
+}
+.kpi-card {
+  border-radius: 20rpx;
+  padding: 18rpx 20rpx;
+  color: #ffffff;
+  margin-bottom: 16rpx;
+}
+.kpi-title {
+  font-size: 22rpx;
+  opacity: 0.88;
+}
+.kpi-value {
+  font-size: 40rpx;
+  font-weight: 700;
+  margin-top: 6rpx;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+.value-strong {
+  font-weight: 600;
+}
+.muted {
+  color: #6b7280;
+}
+.small {
+  font-size: 22rpx;
+}
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+.tag {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 22rpx;
+  margin-right: 12rpx;
+  margin-bottom: 12rpx;
+}
+.metric-bar {
+  width: 100%;
+  height: 16rpx;
+  border-radius: 999rpx;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-top: 8rpx;
+}
+.metric-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #34d399 0%, #3b82f6 100%);
+}
+.list-card {
+  background: #f8fafc;
+  border-radius: 18rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+.course-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 10rpx;
+}
+.course-meta {
+  font-size: 22rpx;
+  color: #6b7280;
+  line-height: 1.7;
+}
+.empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 50rpx 0;
+}
+.badge {
+  display: inline-block;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #ffffff;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+}
+.badge-light {
+  background: #ecfeff;
+  color: #0f766e;
+}
+.divider {
+  height: 1px;
+  background: #edf2f7;
+  margin: 18rpx 0;
+}
+</style>

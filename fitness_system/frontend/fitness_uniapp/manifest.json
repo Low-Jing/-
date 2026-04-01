@@ -1,0 +1,14 @@
+{
+  "name": "fitness_uniapp_pro",
+  "appid": "__UNI__FITNESSPRO__",
+  "description": "升级版健康体重管理健身系统前端",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "健康体重管理健身系统 Pro"
+  }
+}

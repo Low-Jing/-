@@ -83,6 +83,39 @@ class DiscoverHomeView(APIView):
         })
 
 
+class UserInteractionSummaryView(APIView):
+    renderer_classes = [JSONRenderer]
+
+    def get(self, request):
+        user = get_user_by_id(request.query_params.get('user_id'))
+        if not user:
+            return Response({'message': '用户不存在'}, status=status.HTTP_400_BAD_REQUEST)
+
+        joined_qs = ChallengeJoin.objects.filter(user=user).select_related('challenge').order_by('-id')
+        course_qs = TopicCourseFavorite.objects.filter(user=user).select_related('course').order_by('-id')
+        article_qs = KnowledgeArticleFavorite.objects.filter(user=user).select_related('article').order_by('-id')
+        liked_qs = CommunityPostLike.objects.filter(user=user).select_related('post').order_by('-id')
+
+        recent_actions = []
+        for item in joined_qs[:2]:
+            recent_actions.append({'type': 'challenge', 'title': item.challenge.title, 'text': '已报名挑战'})
+        for item in course_qs[:2]:
+            recent_actions.append({'type': 'course', 'title': item.course.title, 'text': '已收藏课程'})
+        for item in article_qs[:2]:
+            recent_actions.append({'type': 'article', 'title': item.article.title, 'text': '已收藏文章'})
+        for item in liked_qs[:2]:
+            recent_actions.append({'type': 'post', 'title': item.post.nickname, 'text': '已点赞动态'})
+
+        return Response({
+            'joined_challenges_count': joined_qs.count(),
+            'favorite_courses_count': course_qs.count(),
+            'favorite_articles_count': article_qs.count(),
+            'liked_posts_count': liked_qs.count(),
+            'interaction_total': joined_qs.count() + course_qs.count() + article_qs.count() + liked_qs.count(),
+            'recent_actions': recent_actions[:6],
+        })
+
+
 class ChallengeToggleJoinView(APIView):
     renderer_classes = [JSONRenderer]
 
@@ -174,6 +207,5 @@ class CommunityPostToggleLikeView(APIView):
         else:
             CommunityPostLike.objects.create(user=user, post=post)
             active = True
-
         total = post.like_count + post.likes.count()
         return Response({'active': active, 'count': total})

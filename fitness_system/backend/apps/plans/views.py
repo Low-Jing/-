@@ -17,6 +17,31 @@ class FoodListView(generics.ListAPIView):
     serializer_class = FoodSerializer
 
 
+class RecommendationEngineView(APIView):
+    def get(self, request):
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response({'message': '请传入 user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'message': '用户不存在'}, status=status.HTTP_404_NOT_FOUND)
+        if not hasattr(user, 'profile'):
+            return Response({'message': '用户尚未创建健康档案'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rec = recommend_for_user(user)
+        return Response({
+            'algorithm_type': rec['algorithm_type'],
+            'reason_list': rec['reason_list'],
+            'behavior_summary': rec['behavior_summary'],
+            'exercise_title': rec['exercise'].title,
+            'food_name': rec['food'].name,
+            'exercise_text': rec['exercise_text'],
+            'diet_text': rec['diet_text'],
+            'suggestion': rec['suggestion'],
+        }, status=status.HTTP_200_OK)
+
+
 class RecommendPlanView(APIView):
     def post(self, request):
         user_id = request.data.get('user_id')
@@ -45,6 +70,7 @@ class RecommendPlanView(APIView):
         data = RecommendationPlanSerializer(plan).data
         data['algorithm_type'] = rec['algorithm_type']
         data['reason_list'] = rec['reason_list']
+        data['behavior_summary'] = rec['behavior_summary']
         data['exercise_title'] = rec['exercise'].title
         data['food_name'] = rec['food'].name
         return Response(data, status=status.HTTP_201_CREATED)

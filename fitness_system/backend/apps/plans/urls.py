@@ -5,6 +5,7 @@ from .views import (
     DashboardView,
     ExerciseListView,
     FoodListView,
+    RecommendationEngineView,
     RecommendationPlanUserListView,
     RecommendPlanView,
 )
@@ -12,6 +13,7 @@ from .views import (
 urlpatterns = [
     path('exercises/', ExerciseListView.as_view(), name='exercises'),
     path('foods/', FoodListView.as_view(), name='foods'),
+    path('engine/', RecommendationEngineView.as_view(), name='recommend-engine'),
     path('recommend/', RecommendPlanView.as_view(), name='recommend'),
     path('list/', RecommendationPlanUserListView.as_view(), name='plan-list'),
     path('checkins/', CheckInCreateView.as_view(), name='checkins'),

@@ -1,121 +1,136 @@
 <template>
   <view class="container">
     <view class="hero-card">
-      <view class="badge" style="background: rgba(255,255,255,0.18); margin-bottom: 16rpx;">推荐算法增强入口</view>
-      <view class="page-title">AI 训练计划</view>
-      <view class="page-desc">前期以内容推荐为主，后期把挑战报名、内容收藏、社区点赞等行为接进来，形成协同过滤增强。</view>
+      <view class="hero-tag">推荐算法增强入口</view>
+      <view class="hero-title">AI 训练计划</view>
+      <view class="hero-desc">前期以内容推荐为主，后期把挑战报名、内容收藏、社区点赞等行为接进来，形成协同过滤增强。</view>
     </view>
 
-    <view class="card">
+    <view class="section-card">
       <view class="section-title">推荐引擎状态</view>
-      <view class="row"><text class="muted">当前阶段</text><text class="value-strong">{{ enginePhaseText }}</text></view>
-      <view class="row"><text class="muted">报名挑战</text><text class="value-strong">{{ interactionCounts.joined_challenges || 0 }}</text></view>
-      <view class="row"><text class="muted">收藏课程</text><text class="value-strong">{{ interactionCounts.favorite_courses || 0 }}</text></view>
-      <view class="row"><text class="muted">收藏文章</text><text class="value-strong">{{ interactionCounts.favorite_articles || 0 }}</text></view>
-      <view class="row"><text class="muted">点赞动态</text><text class="value-strong">{{ interactionCounts.liked_posts || 0 }}</text></view>
-      <view style="margin-top: 16rpx;">
-        <text class="tag" v-for="item in behaviorTags" :key="item">{{ item }}</text>
+      <view class="kv-row"><text>当前阶段</text><text class="strong">{{ engine.stage || '内容推荐' }}</text></view>
+      <view class="kv-row"><text>报名挑战</text><text class="strong">{{ engine.challenge_count || 0 }}</text></view>
+      <view class="kv-row"><text>收藏课程</text><text class="strong">{{ engine.course_favorite_count || 0 }}</text></view>
+      <view class="kv-row"><text>收藏文章</text><text class="strong">{{ engine.article_favorite_count || 0 }}</text></view>
+      <view class="kv-row"><text>点赞动态</text><text class="strong">{{ engine.feed_like_count || 0 }}</text></view>
+
+      <view class="progress-wrap">
+        <view class="progress-label">协同过滤增强准备度 {{ engineProgress }}%</view>
+        <view class="progress-bg">
+          <view class="progress-bar" :style="{ width: engineProgress + '%' }"></view>
+        </view>
       </view>
-      <view class="small muted" style="margin-top: 12rpx;">这些标签来自发现页互动行为，会用于后期推荐增强。</view>
+
+      <view class="tag-list">
+        <text v-for="(tag, index) in (engine.behavior_keywords || [])" :key="index" class="tag">{{ tag }}</text>
+      </view>
+      <view class="tips">这些标签来自发现页互动行为，会用于后期推荐增强。</view>
     </view>
 
-    <view class="card">
+    <view class="section-card">
       <view class="section-title">算法解释</view>
-      <view v-if="engine.reason_list && engine.reason_list.length">
-        <view class="list-card" v-for="(item,index) in engine.reason_list" :key="index">
-          <view class="course-title">理由 {{ index + 1 }}</view>
-          <view class="course-meta">{{ item }}</view>
-        </view>
+      <view v-for="(item, index) in reasonList" :key="index" class="reason-item">
+        <view class="reason-title">理由 {{ index + 1 }}</view>
+        <view class="reason-desc">{{ item }}</view>
       </view>
-      <view v-else class="empty">暂未生成解释，先点下方按钮生成一份计划。</view>
     </view>
 
-    <view class="card">
+    <view class="section-card">
+      <view class="section-title">候选训练与饮食</view>
+      <view class="sub-title">候选训练</view>
+      <view class="tag-list">
+        <text v-for="(item, index) in (engine.exercise_candidates || [])" :key="'e' + index" class="tag">{{ item }}</text>
+      </view>
+      <view class="sub-title">候选饮食</view>
+      <view class="tag-list">
+        <text v-for="(item, index) in (engine.food_candidates || [])" :key="'f' + index" class="tag green">{{ item }}</text>
+      </view>
+    </view>
+
+    <view class="section-card">
       <view class="section-title">当前最新计划</view>
-      <view v-if="latestPlan && latestPlan.id">
-        <view class="list-card">
-          <view class="course-title">训练卡片</view>
-          <view class="course-meta">{{ latestPlan.exercise_text }}</view>
+      <view v-if="latestPlan">
+        <view class="plan-block">
+          <view class="plan-label">训练卡片</view>
+          <view class="plan-text">{{ latestPlan.exercise_text }}</view>
         </view>
-        <view class="list-card">
-          <view class="course-title">饮食卡片</view>
-          <view class="course-meta">{{ latestPlan.diet_text }}</view>
+        <view class="plan-block">
+          <view class="plan-label">饮食卡片</view>
+          <view class="plan-text">{{ latestPlan.diet_text }}</view>
         </view>
-        <view class="list-card">
-          <view class="course-title">执行建议</view>
-          <view class="course-meta">{{ latestPlan.suggestion }}</view>
+        <view class="plan-block">
+          <view class="plan-label">执行建议</view>
+          <view class="plan-text">{{ latestPlan.suggestion }}</view>
         </view>
       </view>
-      <view v-else class="empty">还没有计划，点击下方按钮生成一份新的。</view>
-      <view class="grid-2">
-        <view class="grid-item-2"><view class="btn" @click="generatePlan">重新生成</view></view>
-        <view class="grid-item-2"><view class="btn btn-green" @click="gotoMine">去打卡</view></view>
-      </view>
-    </view>
+      <view v-else class="empty-text">暂无计划，请先生成一条计划。</view>
 
-    <view class="card">
-      <view class="section-title">推荐预览</view>
-      <view v-if="engine.exercise_text">
-        <view class="list-card">
-          <view class="course-title">候选训练</view>
-          <view class="course-meta">{{ engine.exercise_text }}</view>
-        </view>
-        <view class="list-card">
-          <view class="course-title">候选饮食</view>
-          <view class="course-meta">{{ engine.diet_text }}</view>
-        </view>
+      <view class="btn-row">
+        <view class="btn primary" @click="generatePlan">重新生成</view>
+        <view class="btn success" @click="goMine">去打卡</view>
       </view>
-      <view v-else class="empty">暂无预览信息</view>
     </view>
   </view>
 </template>
 
 <script>
-import { request, requestSafe, getUserId, ensureLogin } from '@/utils/request.js'
+import { request, getUserId } from '@/utils/request.js'
 
 export default {
   data() {
     return {
-      latestPlan: {},
+      userId: '',
       engine: {},
-      dashboard: {},
-      exerciseList: [],
-      foodList: []
+      latestPlan: null
     }
   },
   computed: {
-    enginePhaseText() {
-      if (this.engine.algorithm_type === 'hybrid_cf') return '内容推荐 + 协同过滤增强'
-      return this.dashboard.recommendation_phase || '内容推荐'
+    reasonList() {
+      var reasons = this.engine.reasons || []
+      return reasons.length ? reasons : ['目标类型匹配', '运动偏好匹配', '饮食目标匹配']
     },
-    interactionCounts() {
-      return (this.engine.behavior_summary && this.engine.behavior_summary.interaction_counts) || this.dashboard.interaction_counts || {}
-    },
-    behaviorTags() {
-      var summary = (this.engine.behavior_summary || {})
-      var arr = []
-      if (summary.exercise_keywords && summary.exercise_keywords.length) arr = arr.concat(summary.exercise_keywords)
-      if (summary.diet_keywords && summary.diet_keywords.length) arr = arr.concat(summary.diet_keywords)
-      if (!arr.length && this.dashboard.behavior_keywords) arr = this.dashboard.behavior_keywords
-      return arr
+    engineProgress() {
+      var total = (this.engine.challenge_count || 0)
+        + (this.engine.course_favorite_count || 0)
+        + (this.engine.article_favorite_count || 0)
+        + (this.engine.feed_like_count || 0)
+      return Math.min(100, total * 15)
     }
   },
   onShow() {
-    if (!ensureLogin()) return
-    this.loadAll()
+    this.userId = getUserId()
+    if (!this.userId) {
+      uni.reLaunch({ url: '/pages/login/login' })
+      return
+    }
+    this.loadEngine()
+    this.loadPlans()
   },
   methods: {
-    loadAll() {
-      var userId = getUserId()
+    loadEngine() {
       var that = this
-      requestSafe({ url: '/plans/list/?user_id=' + userId }, []).then(function(res) {
-        that.latestPlan = res && res.length ? res[0] : {}
+      request({
+        url: '/plans/engine/?user_id=' + that.userId,
+        method: 'GET'
+      }).then(function(data) {
+        that.engine = data || {}
+      }).catch(function(err) {
+        console.log('engine error =>', err)
       })
-      requestSafe({ url: '/plans/engine/?user_id=' + userId }, {}).then(function(res) {
-        that.engine = res || {}
-      })
-      requestSafe({ url: '/plans/dashboard/?user_id=' + userId }, {}).then(function(res) {
-        that.dashboard = res || {}
+    },
+    loadPlans() {
+      var that = this
+      request({
+        url: '/plans/list/?user_id=' + that.userId,
+        method: 'GET'
+      }).then(function(data) {
+        if (Array.isArray(data) && data.length) {
+          that.latestPlan = data[0]
+        } else {
+          that.latestPlan = null
+        }
+      }).catch(function(err) {
+        console.log('plan list error =>', err)
       })
     },
     generatePlan() {
@@ -124,18 +139,24 @@ export default {
         url: '/plans/recommend/',
         method: 'POST',
         data: {
-          user_id: getUserId()
+          user_id: that.userId
         }
-      }).then(function(data) {
-        that.latestPlan = data || {}
-        that.loadAll()
-        uni.showToast({ title: '计划已生成', icon: 'success' })
+      }).then(function() {
+        uni.showToast({
+          title: '计划已生成',
+          icon: 'success'
+        })
+        that.loadEngine()
+        that.loadPlans()
       }).catch(function(err) {
         console.log('generate plan error =>', err)
-        uni.showToast({ title: '生成失败', icon: 'none' })
+        uni.showToast({
+          title: '生成失败',
+          icon: 'none'
+        })
       })
     },
-    gotoMine() {
+    goMine() {
       uni.switchTab({ url: '/pages/mine/mine' })
     }
   }
@@ -143,4 +164,33 @@ export default {
 </script>
 
 <style>
+.container { padding: 24rpx; }
+.hero-card { background: linear-gradient(135deg, #4f46e5, #22c1dc); border-radius: 28rpx; padding: 28rpx; color: #fff; margin-bottom: 24rpx; }
+.hero-tag { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 14rpx; }
+.hero-title { font-size: 42rpx; font-weight: 700; }
+.hero-desc { font-size: 24rpx; margin-top: 10rpx; }
+.section-card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 10rpx 24rpx rgba(15, 23, 42, 0.05); }
+.section-title { font-size: 34rpx; font-weight: 700; margin-bottom: 18rpx; }
+.kv-row { display: flex; justify-content: space-between; margin-bottom: 16rpx; color: #334155; font-size: 28rpx; }
+.strong { font-weight: 700; }
+.progress-wrap { margin-top: 18rpx; }
+.progress-label { font-size: 24rpx; margin-bottom: 10rpx; color: #475569; }
+.progress-bg { height: 14rpx; border-radius: 999rpx; background: #e2e8f0; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #22c1dc); }
+.tag-list { margin-top: 16rpx; }
+.tag { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: #eef2ff; color: #4f46e5; font-size: 22rpx; margin-right: 10rpx; margin-bottom: 10rpx; }
+.green { background: #ecfdf5; color: #059669; }
+.tips { color: #64748b; font-size: 24rpx; margin-top: 8rpx; }
+.reason-item { background: #f8fafc; border-radius: 18rpx; padding: 18rpx; margin-bottom: 14rpx; }
+.reason-title { font-size: 28rpx; font-weight: 700; margin-bottom: 8rpx; }
+.reason-desc { font-size: 24rpx; color: #475569; }
+.sub-title { font-size: 28rpx; font-weight: 600; margin-top: 8rpx; margin-bottom: 10rpx; }
+.plan-block { background: #f8fafc; border-radius: 18rpx; padding: 18rpx; margin-bottom: 14rpx; }
+.plan-label { font-size: 28rpx; font-weight: 700; margin-bottom: 10rpx; }
+.plan-text { font-size: 24rpx; color: #475569; line-height: 1.8; }
+.btn-row { display: flex; gap: 18rpx; margin-top: 18rpx; }
+.btn { flex: 1; text-align: center; border-radius: 18rpx; padding: 22rpx 0; font-weight: 700; font-size: 28rpx; }
+.primary { color: #fff; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+.success { color: #fff; background: linear-gradient(90deg, #10b981, #14b8a6); }
+.empty-text { text-align: center; color: #94a3b8; padding: 30rpx 0; }
 </style>

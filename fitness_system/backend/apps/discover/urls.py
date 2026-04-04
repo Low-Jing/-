@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     DiscoverHomeView,
-    UserInteractionSummaryView,
+    DiscoverSearchView,
+    DiscoverRecommendView,
     ChallengeToggleJoinView,
     TopicCourseToggleFavoriteView,
     KnowledgeArticleToggleFavoriteView,
@@ -10,7 +11,8 @@ from .views import (
 
 urlpatterns = [
     path('home/', DiscoverHomeView.as_view(), name='discover-home'),
-    path('user-summary/', UserInteractionSummaryView.as_view(), name='discover-user-summary'),
+    path('search/', DiscoverSearchView.as_view(), name='discover-search'),
+    path('recommend/', DiscoverRecommendView.as_view(), name='discover-recommend'),
     path('challenge/toggle-join/', ChallengeToggleJoinView.as_view(), name='discover-challenge-toggle-join'),
     path('course/toggle-favorite/', TopicCourseToggleFavoriteView.as_view(), name='discover-course-toggle-favorite'),
     path('article/toggle-favorite/', KnowledgeArticleToggleFavoriteView.as_view(), name='discover-article-toggle-favorite'),

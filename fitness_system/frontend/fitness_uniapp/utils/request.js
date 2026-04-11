@@ -1,22 +1,77 @@
 import { BASE_URL } from '@/common/config.js'
 
+function isEnvelope(payload) {
+  return !!(
+    payload
+    && typeof payload === 'object'
+    && Object.prototype.hasOwnProperty.call(payload, 'code')
+    && Object.prototype.hasOwnProperty.call(payload, 'message')
+    && Object.prototype.hasOwnProperty.call(payload, 'data')
+  )
+}
+
+function unwrapPayload(payload) {
+  return isEnvelope(payload) ? payload.data : payload
+}
+
+function normalizeError(res) {
+  var payload = res && res.data
+  if (isEnvelope(payload)) {
+    return {
+      statusCode: res.statusCode,
+      message: payload.message || '请求失败',
+      code: payload.code,
+      data: payload.data || {}
+    }
+  }
+  return {
+    statusCode: res.statusCode,
+    message: (payload && payload.message) || '请求失败',
+    data: payload
+  }
+}
+
 export function request(options) {
   return new Promise(function(resolve, reject) {
     uni.request({
       url: BASE_URL + options.url,
       method: options.method || 'GET',
       data: options.data || {},
-      header: {
+      header: Object.assign({
         'Content-Type': 'application/json'
-      },
+      }, options.header || {}),
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(res.data)
+          resolve(unwrapPayload(res.data))
         } else {
-          reject({
-            statusCode: res.statusCode,
-            data: res.data
+          reject(normalizeError(res))
+        }
+      },
+      fail: function(err) {
+        reject(err)
+      }
+    })
+  })
+}
+
+export function requestWithMeta(options) {
+  return new Promise(function(resolve, reject) {
+    uni.request({
+      url: BASE_URL + options.url,
+      method: options.method || 'GET',
+      data: options.data || {},
+      header: Object.assign({
+        'Content-Type': 'application/json'
+      }, options.header || {}),
+      success: function(res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({
+            raw: res,
+            data: unwrapPayload(res.data),
+            envelope: isEnvelope(res.data) ? res.data : null
           })
+        } else {
+          reject(normalizeError(res))
         }
       },
       fail: function(err) {
@@ -28,8 +83,8 @@ export function request(options) {
 
 export function requestSafe(options, fallback) {
   return new Promise(function(resolve) {
-    request(options).then(function(res) {
-      resolve(res)
+    request(options).then(function(data) {
+      resolve(data)
     }).catch(function(err) {
       console.log('requestSafe fallback =>', options.url, err)
       resolve(fallback)

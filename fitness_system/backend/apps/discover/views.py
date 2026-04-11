@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,14 +21,32 @@ from .serializers import (
 )
 
 CHANNELS = [
-    {'icon': '🔥', 'text': '挑战赛'},
-    {'icon': '🎬', 'text': '课程'},
-    {'icon': '🥗', 'text': '饮食'},
-    {'icon': '📚', 'text': '知识'},
-    {'icon': '🏃', 'text': '跑步'},
-    {'icon': '🧘', 'text': '拉伸'},
-    {'icon': '👥', 'text': '社区'},
-    {'icon': '⭐', 'text': '精选'},
+    {'icon': '🔥', 'text': '挑战赛', 'anchor': 'challenge'},
+    {'icon': '🎬', 'text': '课程', 'anchor': 'course'},
+    {'icon': '📚', 'text': '知识', 'anchor': 'article'},
+    {'icon': '👥', 'text': '社区', 'anchor': 'community'},
+]
+
+
+BANNERS = [
+    {
+        'image_key': 'banner1',
+        'title': '春季轻断食与快走周',
+        'subtitle': '挑战、课程、知识与社区内容整合在一个页面',
+        'badge': '内容运营位',
+    },
+    {
+        'image_key': 'banner2',
+        'title': '一周燃脂训练专栏',
+        'subtitle': '围绕跑步、快走、HIIT 与轻食方案做连续推荐',
+        'badge': '训练专题',
+    },
+    {
+        'image_key': 'banner3',
+        'title': '轻食与高蛋白组合',
+        'subtitle': '更贴近减脂塑形用户的饮食内容入口',
+        'badge': '饮食专题',
+    },
 ]
 
 
@@ -58,106 +75,117 @@ def build_user_context(user):
     }
 
 
-def tokenize(text):
-    if not text:
-        return []
-    cleaned = str(text)
-    for sep in ['，', ',', '、', ' ', '/', '|', '-', '：', ':', '；', ';']:
-        cleaned = cleaned.replace(sep, ' ')
-    return [item.strip().lower() for item in cleaned.split() if item.strip()]
+def goal_text(user):
+    profile = getattr(user, 'profile', None) if user else None
+    if not profile:
+        return '健康保持'
+    mapping = {
+        'lose_weight': '减脂塑形',
+        'gain_muscle': '增肌提升',
+        'keep_fit': '健康保持',
+    }
+    return mapping.get(profile.goal_type, '健康保持')
 
 
-def build_interest_keywords(user, context):
-    keywords = []
-    if not user:
-        return keywords
-
-    profile = getattr(user, 'profile', None)
-    if profile:
-        keywords.extend(tokenize(profile.exercise_preference))
-        keywords.extend(tokenize(profile.diet_preference))
-        keywords.extend(tokenize(profile.goal_type))
-        keywords.extend(tokenize(profile.available_time))
-
-    joined = Challenge.objects.filter(id__in=context['joined_ids'])
-    courses = TopicCourse.objects.filter(id__in=context['course_favorite_ids'])
-    articles = KnowledgeArticle.objects.filter(id__in=context['article_favorite_ids'])
-
-    for item in joined:
-        keywords.extend(tokenize(item.title))
-        keywords.extend(tokenize(item.tag))
-    for item in courses:
-        keywords.extend(tokenize(item.title))
-        keywords.extend(tokenize(item.tags))
-        keywords.extend(tokenize(item.level))
-    for item in articles:
-        keywords.extend(tokenize(item.title))
-        keywords.extend(tokenize(item.category))
-
-    seen = set()
-    result = []
-    for word in keywords:
-        if word and word not in seen:
-            seen.add(word)
-            result.append(word)
-    return result[:12]
-
-
-def score_text(text, keywords):
-    lower_text = str(text or '').lower()
-    score = 0
-    for kw in keywords:
-        if kw and kw in lower_text:
-            score += 1
-    return score
-
-
-def score_challenge(item, keywords, context):
-    score = score_text(item.title, keywords) + score_text(item.description, keywords) + score_text(item.tag, keywords)
-    if item.id in context['joined_ids']:
-        score += 4
-    return score
-
-
-def score_course(item, keywords, context):
-    score = score_text(item.title, keywords) + score_text(item.description, keywords) + score_text(item.tags, keywords) + score_text(item.level, keywords)
-    if item.id in context['course_favorite_ids']:
-        score += 4
-    return score
-
-
-def score_article(item, keywords, context):
-    score = score_text(item.title, keywords) + score_text(item.summary, keywords) + score_text(item.category, keywords)
-    if item.id in context['article_favorite_ids']:
-        score += 4
-    return score
-
-
-def score_post(item, keywords, context):
-    score = score_text(item.nickname, keywords) + score_text(item.content, keywords)
-    if item.id in context['post_liked_ids']:
-        score += 4
-    return score
-
-
-def build_banner_list():
-    return [
-        {
-            'title': '春季轻断食与快走周',
-            'subtitle': '挑战、课程、营养知识与社区互动整合到一个页面',
-            'badge': '运营主题',
-        },
-        {
-            'title': '减脂塑形精选内容',
-            'subtitle': '围绕跑步、快走、轻食和拉伸，构建连续使用闭环',
-            'badge': '内容推荐',
-        },
-        {
-            'title': '行为数据正在积累',
-            'subtitle': '报名、收藏、点赞等行为将用于后期协同过滤增强',
-            'badge': '算法增强',
-        },
+def enrich_challenge(item, data, user):
+    gtext = goal_text(user)
+    data['cover_title'] = f"{item.title} · {gtext}专题"
+    data['detail_intro'] = item.description or '通过连续挑战建立规律训练与饮食执行习惯。'
+    data['detail_sections'] = [
+        {'title': '适合人群', 'content': f'适合当前处于{gtext}阶段，希望通过连续 {item.days} 天建立节奏的用户。'},
+        {'title': '完成规则', 'content': f'每天完成 1 次计划训练，并记录至少 1 条打卡反馈，连续坚持 {item.days} 天。'},
+        {'title': '收获目标', 'content': '强化执行感、积累行为样本，并为后续推荐增强提供更稳定的兴趣信号。'},
     ]
+    data['task_list'] = [
+        '完成当天训练计划',
+        '记录体重变化与主观感受',
+        '完成饮食建议中的 1 个关键动作',
+    ]
+    return data
+
+
+def enrich_course(item, data, user):
+    tags = data.get('tag_list') or []
+    gtext = goal_text(user)
+    data['coach_name'] = 'FitLife AI 教练组'
+    data['duration_text'] = f"建议每次 20~35 分钟，适合 {gtext} 阶段连续练习"
+    data['lesson_points'] = [
+        f'第 1 讲：理解 {item.title} 的训练目标与动作结构',
+        '第 2 讲：掌握每次训练的节奏安排与热身要点',
+        '第 3 讲：结合饮食建议完成一周执行闭环',
+    ]
+    data['full_content'] = (
+        f"{item.title} 以 {item.level} 难度展开，围绕 {', '.join(tags) if tags else '训练基础'} 做连续训练设计。\n"
+        f"本课程更适合 {gtext} 用户，用较低理解成本快速进入系统训练。\n"
+        "课程会强调动作质量、呼吸节奏、完成顺序与恢复建议。"
+    )
+    return data
+
+
+def enrich_article(item, data, user):
+    gtext = goal_text(user)
+    data['author'] = 'FitLife 内容编辑部'
+    data['headline'] = f"{item.title}｜适合 {gtext} 用户阅读"
+    data['article_blocks'] = [
+        item.summary or '本文围绕饮食、训练和行为反馈之间的关系进行说明。',
+        f'对于 {gtext} 用户，更重要的不是一次练很猛，而是建立可以连续执行的节奏。',
+        '在系统中，知识内容不仅用于阅读，也会转化为用户兴趣和推荐增强的信号。',
+    ]
+    data['takeaways'] = [
+        '先保证连续执行，再追求高强度。',
+        '训练和饮食建议需要成套理解。',
+        '互动行为会帮助系统理解你的真实偏好。',
+    ]
+    return data
+
+
+def enrich_post(item, data):
+    data['topic_label'] = '训练反馈'
+    data['comments_preview'] = [
+        {'nickname': '轻食打卡组', 'text': '这种记录方式很适合后续复盘。'},
+        {'nickname': '晨跑研究社', 'text': '如果能配合计划执行，效果会更稳定。'},
+    ]
+    return data
+
+
+def build_personalized_pick(user, context, challenges, courses, articles):
+    if not user:
+        return {
+            'title': '本周精选',
+            'keywords': ['减脂', '轻食', '快走'],
+            'reasons': ['当前尚无足够行为数据，先以目标和基础偏好做内容推荐。']
+        }
+    profile = getattr(user, 'profile', None)
+    keywords = []
+    if profile:
+        keywords.extend([x for x in str(profile.exercise_preference or '').replace('，', ',').split(',') if x])
+        keywords.extend([x for x in str(profile.diet_preference or '').replace('，', ',').split(',') if x])
+    if context['joined_ids']:
+        keywords.append('挑战报名')
+    if context['course_favorite_ids']:
+        keywords.append('课程收藏')
+    if context['article_favorite_ids']:
+        keywords.append('知识阅读')
+    if context['post_liked_ids']:
+        keywords.append('社区互动')
+    dedup = []
+    seen = set()
+    for kw in keywords:
+        kw = kw.strip()
+        if kw and kw not in seen:
+            seen.add(kw)
+            dedup.append(kw)
+    reasons = [
+        '先依据目标、训练偏好和饮食偏好生成内容推荐。',
+        '当发现页互动增多后，会把报名、收藏、点赞作为增强信号。',
+    ]
+    if context['joined_ids'] or context['course_favorite_ids'] or context['article_favorite_ids'] or context['post_liked_ids']:
+        reasons.append('你已经产生行为数据，后续推荐会逐渐向“内容推荐 + 协同过滤增强”过渡。')
+    return {
+        'title': '为你精选',
+        'keywords': dedup[:6] if dedup else ['减脂', '轻食', '快走'],
+        'reasons': reasons,
+    }
 
 
 class DiscoverHomeView(APIView):
@@ -167,110 +195,90 @@ class DiscoverHomeView(APIView):
         user = get_user_by_id(request.query_params.get('user_id'))
         context = build_user_context(user)
 
-        challenges = Challenge.objects.filter(is_active=True).prefetch_related('joins')[:6]
-        courses = TopicCourse.objects.filter(is_active=True).prefetch_related('favorites')[:6]
-        articles = KnowledgeArticle.objects.filter(is_active=True).prefetch_related('favorites')[:6]
-        feeds = CommunityPost.objects.filter(is_active=True).prefetch_related('likes')[:6]
+        challenges_qs = Challenge.objects.filter(is_active=True).prefetch_related('joins')[:6]
+        courses_qs = TopicCourse.objects.filter(is_active=True).prefetch_related('favorites')[:6]
+        articles_qs = KnowledgeArticle.objects.filter(is_active=True).prefetch_related('favorites')[:6]
+        feeds_qs = CommunityPost.objects.filter(is_active=True).prefetch_related('likes')[:6]
+
+        challenges = []
+        for item, data in zip(challenges_qs, ChallengeSerializer(challenges_qs, many=True, context=context).data):
+            challenges.append(enrich_challenge(item, data, user))
+
+        topics = []
+        for item, data in zip(courses_qs, TopicCourseSerializer(courses_qs, many=True, context=context).data):
+            topics.append(enrich_course(item, data, user))
+
+        articles = []
+        for item, data in zip(articles_qs, KnowledgeArticleSerializer(articles_qs, many=True, context=context).data):
+            articles.append(enrich_article(item, data, user))
+
+        feeds = []
+        for item, data in zip(feeds_qs, CommunityPostSerializer(feeds_qs, many=True, context=context).data):
+            feeds.append(enrich_post(item, data))
 
         return Response({
             'theme': {
-                'title': '春季轻断食与快走周',
-                'desc': '把挑战、课程、营养知识和社区互动放到一个页面，让系统更像完整产品。'
+                'title': '发现',
+                'desc': '去掉搜索，强化运营位、内容详情和模块互动，让发现页更像真正的内容型应用。'
             },
-            'banners': build_banner_list(),
+            'banners': BANNERS,
             'channels': CHANNELS,
-            'challenges': ChallengeSerializer(challenges, many=True, context=context).data,
-            'topics': TopicCourseSerializer(courses, many=True, context=context).data,
-            'articles': KnowledgeArticleSerializer(articles, many=True, context=context).data,
-            'feeds': CommunityPostSerializer(feeds, many=True, context=context).data,
+            'editor_pick': build_personalized_pick(user, context, challenges, topics, articles),
+            'challenges': challenges,
+            'topics': topics,
+            'articles': articles,
+            'feeds': feeds,
         })
 
 
-class DiscoverSearchView(APIView):
+class UserInteractionSummaryView(APIView):
     renderer_classes = [JSONRenderer]
 
     def get(self, request):
         user = get_user_by_id(request.query_params.get('user_id'))
-        context = build_user_context(user)
-        q = (request.query_params.get('q') or '').strip()
-        tab = (request.query_params.get('tab') or 'all').strip()
+        if not user:
+            return Response({'message': '用户不存在'}, status=status.HTTP_400_BAD_REQUEST)
 
-        challenge_qs = Challenge.objects.filter(is_active=True)
-        course_qs = TopicCourse.objects.filter(is_active=True)
-        article_qs = KnowledgeArticle.objects.filter(is_active=True)
-        post_qs = CommunityPost.objects.filter(is_active=True)
+        joined_qs = ChallengeJoin.objects.filter(user=user).select_related('challenge').order_by('-id')
+        course_qs = TopicCourseFavorite.objects.filter(user=user).select_related('course').order_by('-id')
+        article_qs = KnowledgeArticleFavorite.objects.filter(user=user).select_related('article').order_by('-id')
+        liked_qs = CommunityPostLike.objects.filter(user=user).select_related('post').order_by('-id')
 
-        if q:
-            challenge_qs = challenge_qs.filter(Q(title__icontains=q) | Q(description__icontains=q) | Q(tag__icontains=q))
-            course_qs = course_qs.filter(Q(title__icontains=q) | Q(description__icontains=q) | Q(tags__icontains=q) | Q(level__icontains=q))
-            article_qs = article_qs.filter(Q(title__icontains=q) | Q(summary__icontains=q) | Q(category__icontains=q))
-            post_qs = post_qs.filter(Q(nickname__icontains=q) | Q(content__icontains=q))
+        recent_actions = []
+        for item in joined_qs[:2]:
+            recent_actions.append({'action': '已报名挑战', 'target': item.challenge.title})
+        for item in course_qs[:2]:
+            recent_actions.append({'action': '已收藏课程', 'target': item.course.title})
+        for item in article_qs[:2]:
+            recent_actions.append({'action': '已收藏文章', 'target': item.article.title})
+        for item in liked_qs[:2]:
+            recent_actions.append({'action': '已点赞动态', 'target': item.post.nickname})
 
-        data = {
-            'query': q,
-            'tab': tab,
-            'challenges': ChallengeSerializer(challenge_qs[:8], many=True, context=context).data,
-            'topics': TopicCourseSerializer(course_qs[:8], many=True, context=context).data,
-            'articles': KnowledgeArticleSerializer(article_qs[:8], many=True, context=context).data,
-            'feeds': CommunityPostSerializer(post_qs[:8], many=True, context=context).data,
-        }
-
-        if tab == 'challenge':
-            data['topics'] = []
-            data['articles'] = []
-            data['feeds'] = []
-        elif tab == 'course':
-            data['challenges'] = []
-            data['articles'] = []
-            data['feeds'] = []
-        elif tab == 'article':
-            data['challenges'] = []
-            data['topics'] = []
-            data['feeds'] = []
-        elif tab == 'community':
-            data['challenges'] = []
-            data['topics'] = []
-            data['articles'] = []
-
-        return Response(data)
-
-
-class DiscoverRecommendView(APIView):
-    renderer_classes = [JSONRenderer]
-
-    def get(self, request):
-        user = get_user_by_id(request.query_params.get('user_id'))
-        context = build_user_context(user)
-        keywords = build_interest_keywords(user, context)
-
-        challenge_list = list(Challenge.objects.filter(is_active=True).prefetch_related('joins'))
-        course_list = list(TopicCourse.objects.filter(is_active=True).prefetch_related('favorites'))
-        article_list = list(KnowledgeArticle.objects.filter(is_active=True).prefetch_related('favorites'))
-        post_list = list(CommunityPost.objects.filter(is_active=True).prefetch_related('likes'))
-
-        challenge_list.sort(key=lambda item: (score_challenge(item, keywords, context), item.participant_count), reverse=True)
-        course_list.sort(key=lambda item: (score_course(item, keywords, context), item.id), reverse=True)
-        article_list.sort(key=lambda item: (score_article(item, keywords, context), item.read_minutes), reverse=True)
-        post_list.sort(key=lambda item: (score_post(item, keywords, context), item.like_count), reverse=True)
-
-        reasons = []
-        if keywords:
-            reasons.append('已根据你的偏好与互动行为提取关键词：' + '、'.join(keywords[:6]))
-        else:
-            reasons.append('当前仍以默认优质内容与基础内容推荐为主。')
-        if context['joined_ids'] or context['course_favorite_ids'] or context['article_favorite_ids'] or context['post_liked_ids']:
-            reasons.append('系统检测到你已产生发现页互动行为，后续可用于协同过滤增强。')
-        else:
-            reasons.append('继续参与挑战、收藏课程和点赞动态，可提升后续推荐个性化程度。')
+        interaction_total = joined_qs.count() + course_qs.count() + article_qs.count() + liked_qs.count()
+        stage = '内容推荐' if interaction_total < 4 else '内容推荐 + 协同过滤增强'
+        behavior_keywords = []
+        for item in joined_qs[:3]:
+            behavior_keywords.append(item.challenge.tag)
+        for item in course_qs[:3]:
+            behavior_keywords.extend([x.strip() for x in item.course.tags.replace('、', '，').split('，') if x.strip()][:2])
+        for item in article_qs[:3]:
+            behavior_keywords.append(item.article.category)
+        dedup = []
+        seen = set()
+        for kw in behavior_keywords:
+            if kw not in seen:
+                seen.add(kw)
+                dedup.append(kw)
 
         return Response({
-            'stage': '内容推荐 + 行为增强准备',
-            'keywords': keywords,
-            'reasons': reasons,
-            'challenge_recommendations': ChallengeSerializer(challenge_list[:4], many=True, context=context).data,
-            'course_recommendations': TopicCourseSerializer(course_list[:4], many=True, context=context).data,
-            'article_recommendations': KnowledgeArticleSerializer(article_list[:4], many=True, context=context).data,
-            'community_recommendations': CommunityPostSerializer(post_list[:4], many=True, context=context).data,
+            'challenge_count': joined_qs.count(),
+            'course_favorite_count': course_qs.count(),
+            'article_favorite_count': article_qs.count(),
+            'feed_like_count': liked_qs.count(),
+            'interaction_total': interaction_total,
+            'recent_actions': recent_actions[:6],
+            'stage': stage,
+            'behavior_keywords': dedup[:8],
         })
 
 
@@ -291,14 +299,12 @@ class ChallengeToggleJoinView(APIView):
         if obj:
             obj.delete()
             active = False
-            message = '已取消报名'
         else:
             ChallengeJoin.objects.create(user=user, challenge=challenge)
             active = True
-            message = '报名成功'
 
         total = challenge.participant_count + challenge.joins.count()
-        return Response({'active': active, 'count': total, 'people_text': f'{total:,}', 'message': message})
+        return Response({'active': active, 'count': total, 'people_text': f'{total:,}'})
 
 
 class TopicCourseToggleFavoriteView(APIView):
@@ -318,12 +324,10 @@ class TopicCourseToggleFavoriteView(APIView):
         if obj:
             obj.delete()
             active = False
-            message = '已取消收藏'
         else:
             TopicCourseFavorite.objects.create(user=user, course=course)
             active = True
-            message = '已收藏课程'
-        return Response({'active': active, 'message': message})
+        return Response({'active': active})
 
 
 class KnowledgeArticleToggleFavoriteView(APIView):
@@ -343,12 +347,10 @@ class KnowledgeArticleToggleFavoriteView(APIView):
         if obj:
             obj.delete()
             active = False
-            message = '已取消收藏'
         else:
             KnowledgeArticleFavorite.objects.create(user=user, article=article)
             active = True
-            message = '已收藏文章'
-        return Response({'active': active, 'message': message})
+        return Response({'active': active})
 
 
 class CommunityPostToggleLikeView(APIView):
@@ -368,11 +370,8 @@ class CommunityPostToggleLikeView(APIView):
         if obj:
             obj.delete()
             active = False
-            message = '已取消点赞'
         else:
             CommunityPostLike.objects.create(user=user, post=post)
             active = True
-            message = '已点赞'
-
         total = post.like_count + post.likes.count()
-        return Response({'active': active, 'count': total, 'message': message})
+        return Response({'active': active, 'count': total})

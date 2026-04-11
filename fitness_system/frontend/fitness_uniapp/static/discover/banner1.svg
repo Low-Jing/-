@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" rx="36" fill="url(#g1)"/>
+  <circle cx="1010" cy="120" r="88" fill="rgba(255,255,255,0.18)"/>
+  <circle cx="1120" cy="220" r="64" fill="rgba(255,255,255,0.12)"/>
+  <text x="70" y="165" fill="#ffffff" font-size="54" font-family="Arial, PingFang SC, Microsoft YaHei" font-weight="700">春季轻断食与快走周</text>
+  <text x="70" y="235" fill="#eef2ff" font-size="26" font-family="Arial, PingFang SC, Microsoft YaHei">把挑战、课程、知识和社区做成连续使用的内容闭环</text>
+  <text x="70" y="300" fill="#ffffff" font-size="24" font-family="Arial, PingFang SC, Microsoft YaHei">DISCOVER · FITLIFE PRO</text>
+</svg>

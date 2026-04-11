@@ -1,6 +1,8 @@
+import datetime
 import re
 from collections import Counter, defaultdict
 from django.contrib.auth.models import User
+from django.utils import timezone
 from apps.health.models import HealthRecord
 from apps.plans.models import CheckIn, Exercise, Food, RecommendationPlan
 from apps.discover.models import (
@@ -76,11 +78,30 @@ def extract_behavior_keywords(user):
     }
 
 
+def extract_recent_plan_memory(user):
+    recent_plans = list(RecommendationPlan.objects.filter(user=user).order_by('-created_at', '-id')[:5])
+    exercise_titles = []
+    food_names = []
+    for plan in recent_plans:
+        ex_match = re.search(r'今日训练：([^，。]+)', plan.exercise_text or '')
+        food_match = re.search(r'今日饮食：推荐\s*([^，。]+)', plan.diet_text or '')
+        if ex_match:
+            exercise_titles.append(ex_match.group(1).strip())
+        if food_match:
+            food_names.append(food_match.group(1).strip())
+    return {
+        'plan_count': RecommendationPlan.objects.filter(user=user).count(),
+        'recent_exercise_titles': exercise_titles,
+        'recent_food_names': food_names,
+    }
+
+
 def build_profile_context(user):
     profile = user.profile
     record = latest_health_record(user)
     bmi = record.bmi if record else 0
     behavior = extract_behavior_keywords(user)
+    memory = extract_recent_plan_memory(user)
     return {
         'profile': profile,
         'bmi': bmi,
@@ -89,6 +110,7 @@ def build_profile_context(user):
         'diet_tokens': split_tokens(profile.diet_preference),
         'dislike_tokens': split_tokens(profile.dislike_items),
         'behavior': behavior,
+        'memory': memory,
     }
 
 
@@ -98,6 +120,7 @@ def score_exercise(item, context):
     behavior_keywords = context['behavior']['exercise_keywords']
     minutes = context['minutes']
     bmi = context['bmi']
+    recent_titles = context['memory']['recent_exercise_titles']
     score = 0
     reasons = []
 
@@ -142,7 +165,14 @@ def score_exercise(item, context):
     if bmi and bmi >= 24 and item.difficulty == '高':
         score -= 5
 
-    return {'item': item, 'score': score, 'reasons': reasons[:4]}
+    if item.title in recent_titles[:1]:
+        score -= 18
+        reasons.append('最近刚推荐过，进行轮换')
+    elif item.title in recent_titles[:3]:
+        score -= 10
+        reasons.append('近期出现过，适度降权')
+
+    return {'item': item, 'score': score, 'reasons': list(dict.fromkeys(reasons))[:5]}
 
 
 def score_food(item, context):
@@ -150,6 +180,7 @@ def score_food(item, context):
     diet_tokens = context['diet_tokens']
     behavior_keywords = context['behavior']['diet_keywords']
     dislike_tokens = context['dislike_tokens']
+    recent_food_names = context['memory']['recent_food_names']
     score = 0
     reasons = []
 
@@ -170,15 +201,11 @@ def score_food(item, context):
             reasons.append('发现页互动行为增强了该饮食方向')
             break
 
-    disliked = False
     for token in dislike_tokens:
         if token and token in tag_text:
             score -= 100
-            disliked = True
             reasons.append('命中厌恶项，强制降权')
-            break
-    if disliked:
-        return {'item': item, 'score': score, 'reasons': reasons[:4]}
+            return {'item': item, 'score': score, 'reasons': list(dict.fromkeys(reasons))[:5]}
 
     if profile.goal_type == 'lose_weight':
         if (item.calories or 0) <= 380:
@@ -197,7 +224,14 @@ def score_food(item, context):
             score += 10
             reasons.append('热量较均衡')
 
-    return {'item': item, 'score': score, 'reasons': reasons[:4]}
+    if item.name in recent_food_names[:1]:
+        score -= 16
+        reasons.append('最近刚推荐过，进行轮换')
+    elif item.name in recent_food_names[:3]:
+        score -= 8
+        reasons.append('近期出现过，适度降权')
+
+    return {'item': item, 'score': score, 'reasons': list(dict.fromkeys(reasons))[:5]}
 
 
 def similar_users(current_user):
@@ -218,11 +252,13 @@ def similar_users(current_user):
             score += len(current_ex & ex) * 15
         if current_food and fd:
             score += len(current_food & fd) * 10
+
+        other_behavior = extract_behavior_keywords(user)
+        score += len(current_behavior_ex & set(other_behavior['exercise_keywords'])) * 10
+        score += len(current_behavior_food & set(other_behavior['diet_keywords'])) * 8
+
         if user.profile.available_time == profile.available_time:
             score += 10
-        user_behavior = extract_behavior_keywords(user)
-        score += len(current_behavior_ex & set(user_behavior['exercise_keywords'])) * 8
-        score += len(current_behavior_food & set(user_behavior['diet_keywords'])) * 6
         if score >= 50:
             result.append((user, score))
     result.sort(key=lambda x: x[1], reverse=True)
@@ -266,6 +302,15 @@ def collaborative_boost(exercise, food, current_user):
     return exercise_boost, food_boost, reasons[:3]
 
 
+def choose_with_rotation(scored_items, memory_count, behavior_total):
+    pool = scored_items[: min(4, len(scored_items))]
+    if not pool:
+        return None, []
+    rotation_seed = memory_count + behavior_total + timezone.now().day + timezone.now().hour
+    index = rotation_seed % len(pool)
+    return pool[index], pool
+
+
 def recommend_for_user(user):
     context = build_profile_context(user)
     exercises = list(Exercise.objects.all())
@@ -278,14 +323,22 @@ def recommend_for_user(user):
     exercise_scores.sort(key=lambda x: x['score'], reverse=True)
     food_scores.sort(key=lambda x: x['score'], reverse=True)
 
-    best_ex = exercise_scores[0]
-    best_food = food_scores[0]
-    ex_cf, food_cf, cf_reasons = collaborative_boost(best_ex['item'], best_food['item'], user)
+    behavior_counts = context['behavior']['counts']
+    behavior_total = sum(behavior_counts.values())
+    memory_count = context['memory']['plan_count']
 
-    interaction_total = sum(context['behavior']['counts'].values())
+    base_ex, ex_pool = choose_with_rotation(exercise_scores, memory_count, behavior_total)
+    base_food, food_pool = choose_with_rotation(food_scores, memory_count + 1, behavior_total)
+
+    best_ex = base_ex or exercise_scores[0]
+    best_food = base_food or food_scores[0]
+
+    ex_cf, food_cf, cf_reasons = collaborative_boost(best_ex['item'], best_food['item'], user)
     algorithm_type = 'content_based'
-    if interaction_total >= 3 and (ex_cf > 0 or food_cf > 0):
+    stage = '内容推荐'
+    if behavior_total >= 4 and (ex_cf > 0 or food_cf > 0):
         algorithm_type = 'hybrid_cf'
+        stage = '内容推荐 + 协同过滤增强'
         best_ex['score'] += ex_cf
         best_food['score'] += food_cf
 
@@ -293,31 +346,58 @@ def recommend_for_user(user):
     final_reason.extend(best_ex['reasons'])
     final_reason.extend(best_food['reasons'])
     final_reason.extend(cf_reasons)
+    if memory_count > 0:
+        final_reason.append('结合历史计划做了去重轮换，避免每次都推同一套方案')
     final_reason = list(dict.fromkeys([item for item in final_reason if item]))[:6]
 
     exercise = best_ex['item']
     food = best_food['item']
-    suggestion = '建议连续执行 7 天后，根据体重变化、主观反馈与完成率对计划进行微调。'
-    if algorithm_type == 'hybrid_cf':
-        suggestion += ' 当前阶段已叠加发现页互动行为与相似用户执行记录，属于“内容推荐 + 协同过滤增强”模式。'
+    suggestion = '建议连续执行 5~7 天后，根据体重变化、主观反馈与完成率对计划进行微调。'
+    if stage == '内容推荐 + 协同过滤增强':
+        suggestion += ' 当前阶段已叠加相似用户成功打卡和发现页互动行为，推荐结果会更贴近你的真实兴趣。'
     else:
-        suggestion += ' 当前阶段以内容推荐为主，更适合冷启动和样本较少的系统。'
-
-    behavior_summary = {
-        'interaction_counts': context['behavior']['counts'],
-        'exercise_keywords': context['behavior']['exercise_keywords'],
-        'diet_keywords': context['behavior']['diet_keywords'],
-    }
+        suggestion += ' 当前阶段以内容推荐为主，适合冷启动和样本较少的系统。'
 
     return {
         'exercise': exercise,
         'food': food,
         'algorithm_type': algorithm_type,
+        'stage': stage,
         'reason_list': final_reason,
-        'behavior_summary': behavior_summary,
+        'behavior_summary': {
+            'challenge_count': behavior_counts['joined_challenges'],
+            'course_favorite_count': behavior_counts['favorite_courses'],
+            'article_favorite_count': behavior_counts['favorite_articles'],
+            'feed_like_count': behavior_counts['liked_posts'],
+            'behavior_keywords': context['behavior']['exercise_keywords'] + context['behavior']['diet_keywords'],
+            'plan_count': memory_count,
+            'recent_exercises': context['memory']['recent_exercise_titles'][:3],
+            'recent_foods': context['memory']['recent_food_names'][:3],
+        },
+        'exercise_candidates': [item['item'].title for item in ex_pool],
+        'food_candidates': [item['item'].name for item in food_pool],
         'exercise_text': f'今日训练：{exercise.title}，分类 {exercise.category}，时长 {exercise.duration_minutes} 分钟，预计消耗 {exercise.calories} 千卡，难度 {exercise.difficulty}。',
         'diet_text': f'今日饮食：推荐 {food.name}，约 {food.calories} 千卡，蛋白质 {food.protein}g，标签 {food.preference_tag}。',
         'suggestion': suggestion,
+    }
+
+
+def build_engine_preview(user):
+    rec = recommend_for_user(user)
+    summary = rec['behavior_summary']
+    return {
+        'stage': rec['stage'],
+        'algorithm_type': rec['algorithm_type'],
+        'challenge_count': summary['challenge_count'],
+        'course_favorite_count': summary['course_favorite_count'],
+        'article_favorite_count': summary['article_favorite_count'],
+        'feed_like_count': summary['feed_like_count'],
+        'behavior_keywords': summary['behavior_keywords'],
+        'exercise_candidates': rec['exercise_candidates'],
+        'food_candidates': rec['food_candidates'],
+        'reasons': rec['reason_list'],
+        'recent_exercises': summary['recent_exercises'],
+        'recent_foods': summary['recent_foods'],
     }
 
 
@@ -335,7 +415,6 @@ def build_dashboard(user):
             date_map[date_key] = True
 
     streak = 0
-    import datetime
     day = datetime.date.today()
     for _ in range(30):
         key = str(day)
@@ -346,7 +425,7 @@ def build_dashboard(user):
             break
 
     recommendation_phase = '内容推荐'
-    if sum(behavior['counts'].values()) >= 3 and len(similar_users(user)) >= 1:
+    if sum(behavior['counts'].values()) >= 4 and len(similar_users(user)) >= 1:
         recommendation_phase = '内容推荐 + 协同过滤增强'
 
     behavior_keywords = behavior['exercise_keywords'] + behavior['diet_keywords']

@@ -3,7 +3,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import CheckIn, Exercise, Food, RecommendationPlan
-from .recommenders import build_dashboard, recommend_for_user
+from .recommenders import build_dashboard, build_engine_preview, recommend_for_user
 from .serializers import CheckInSerializer, ExerciseSerializer, FoodSerializer, RecommendationPlanSerializer
 
 
@@ -29,17 +29,7 @@ class RecommendationEngineView(APIView):
         if not hasattr(user, 'profile'):
             return Response({'message': '用户尚未创建健康档案'}, status=status.HTTP_400_BAD_REQUEST)
 
-        rec = recommend_for_user(user)
-        return Response({
-            'algorithm_type': rec['algorithm_type'],
-            'reason_list': rec['reason_list'],
-            'behavior_summary': rec['behavior_summary'],
-            'exercise_title': rec['exercise'].title,
-            'food_name': rec['food'].name,
-            'exercise_text': rec['exercise_text'],
-            'diet_text': rec['diet_text'],
-            'suggestion': rec['suggestion'],
-        }, status=status.HTTP_200_OK)
+        return Response(build_engine_preview(user), status=status.HTTP_200_OK)
 
 
 class RecommendPlanView(APIView):
@@ -61,18 +51,24 @@ class RecommendPlanView(APIView):
         except ValueError as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        suggestion = rec['suggestion'] + ' 推荐理由：' + '；'.join(rec['reason_list'])
         plan = RecommendationPlan.objects.create(
             user=user,
             exercise_text=rec['exercise_text'],
             diet_text=rec['diet_text'],
-            suggestion=rec['suggestion'] + ' 推荐理由：' + '；'.join(rec['reason_list'])
+            suggestion=suggestion
         )
         data = RecommendationPlanSerializer(plan).data
-        data['algorithm_type'] = rec['algorithm_type']
-        data['reason_list'] = rec['reason_list']
-        data['behavior_summary'] = rec['behavior_summary']
-        data['exercise_title'] = rec['exercise'].title
-        data['food_name'] = rec['food'].name
+        data.update({
+            'algorithm_type': rec['algorithm_type'],
+            'stage': rec['stage'],
+            'reason_list': rec['reason_list'],
+            'behavior_summary': rec['behavior_summary'],
+            'exercise_title': rec['exercise'].title,
+            'food_name': rec['food'].name,
+            'exercise_candidates': rec['exercise_candidates'],
+            'food_candidates': rec['food_candidates'],
+        })
         return Response(data, status=status.HTTP_201_CREATED)
 
 

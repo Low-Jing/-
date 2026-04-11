@@ -80,7 +80,9 @@
 </template>
 
 <script>
-import { request, getUserId } from '@/utils/request.js'
+import { request } from '@/utils/request.js'
+import { getUserId } from '@/utils/session.js'
+import { getPlanEngine, getPlanList, generatePlan as generatePlanApi } from '@/api/plans.js'
 
 export default {
   data() {
@@ -120,7 +122,7 @@ export default {
     },
     loadEngine() {
       var that = this
-      request({ url: '/plans/engine/?user_id=' + that.userId, method: 'GET' }).then(function(data) {
+      getPlanEngine(that.userId).then(function(data) {
         that.engine = data || {}
       }).catch(function(err) {
         console.log('engine error =>', err)
@@ -128,7 +130,7 @@ export default {
     },
     loadPlans() {
       var that = this
-      request({ url: '/plans/list/?user_id=' + that.userId, method: 'GET' }).then(function(data) {
+      getPlanList(that.userId).then(function(data) {
         if (Array.isArray(data) && data.length) {
           that.latestPlan = data[0]
         } else {
@@ -140,11 +142,7 @@ export default {
     },
     generatePlan() {
       var that = this
-      request({
-        url: '/plans/recommend/',
-        method: 'POST',
-        data: { user_id: that.userId }
-      }).then(function(data) {
+      generatePlanApi(that.userId).then(function(data) {
         uni.showToast({ title: '计划已生成', icon: 'success' })
         that.latestPlan = data || null
         that.loadEngine()

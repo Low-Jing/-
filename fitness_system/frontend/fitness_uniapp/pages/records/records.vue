@@ -1,101 +1,83 @@
 <template>
   <view class="container">
     <view class="hero-card">
-      <view class="badge" style="background: rgba(255,255,255,0.18); margin-bottom: 16rpx;">数据驱动健康中心</view>
-      <view class="page-title">健康记录与趋势分析</view>
-      <view class="page-desc">把体重、BMI 和体脂估算串成一条可视化轨迹，让“记录”更像产品，而不是只显示一行表格。</view>
-      <view class="grid-3" style="margin-top: 24rpx;">
-        <view class="grid-item-3"><view class="kpi-card purple"><view class="kpi-title">最新体重</view><view class="kpi-value">{{ latestRecord ? latestRecord.weight : '--' }}</view><view class="kpi-sub">kg</view></view></view>
-        <view class="grid-item-3"><view class="kpi-card blue"><view class="kpi-title">最新 BMI</view><view class="kpi-value">{{ latestRecord ? latestRecord.bmi : '--' }}</view><view class="kpi-sub">指数</view></view></view>
-        <view class="grid-item-3"><view class="kpi-card cyan"><view class="kpi-title">近7天记录</view><view class="kpi-value">{{ recentCount }}</view><view class="kpi-sub">条</view></view></view>
+      <view class="hero-tag">数据驱动健康中心</view>
+      <view class="hero-title">健康记录与趋势分析</view>
+      <view class="hero-desc">把体重、BMI 和状态备注串成一条可视化轨迹，让“记录”更像产品，而不是只显示一行表格。</view>
+      <view class="hero-grid">
+        <view class="hero-metric"><view class="metric-label">最新体重</view><view class="metric-value">{{ latestRecord ? latestRecord.weight : '--' }}</view><view class="metric-unit">kg</view></view>
+        <view class="hero-metric"><view class="metric-label">最新 BMI</view><view class="metric-value">{{ latestRecord ? latestRecord.bmi : '--' }}</view><view class="metric-unit">指数</view></view>
+        <view class="hero-metric"><view class="metric-label">近7天记录</view><view class="metric-value">{{ recentCount }}</view><view class="metric-unit">条</view></view>
       </view>
     </view>
 
-    <view class="grid-2">
-      <view class="grid-item-2">
-        <view class="card">
-          <view class="section-title">体型目标进度</view>
-          <view class="row"><text class="muted">当前体重</text><text class="value-strong">{{ profile.current_weight || '--' }} kg</text></view>
-          <view class="row"><text class="muted">目标体重</text><text class="value-strong">{{ profile.target_weight || '--' }} kg</text></view>
-          <view class="row"><text class="muted">达成度</text><text class="value-strong">{{ goalProgress }}%</text></view>
-          <view class="progress-track"><view class="progress-fill" :style="{ width: goalProgress + '%' }"></view></view>
-          <view class="small muted" style="margin-top: 12rpx;">可以作为答辩时的“可视化反馈”展示。</view>
-        </view>
+    <view class="two-col">
+      <view class="section-card half">
+        <view class="section-title">体型目标进度</view>
+        <view class="kv-row"><text>当前体重</text><text>{{ profile.current_weight || '--' }} kg</text></view>
+        <view class="kv-row"><text>目标体重</text><text>{{ profile.target_weight || '--' }} kg</text></view>
+        <view class="kv-row"><text>达成度</text><text>{{ goalProgress }}%</text></view>
+        <view class="progress-bg"><view class="progress-bar" :style="{ width: goalProgress + '%' }"></view></view>
+        <view class="tips">可以作为答辩时的“可视化反馈”展示。</view>
       </view>
-      <view class="grid-item-2">
-        <view class="card">
-          <view class="section-title">一周状态摘要</view>
-          <view class="row"><text class="muted">平均体重</text><text class="value-strong">{{ weeklyAvgWeight }}</text></view>
-          <view class="row"><text class="muted">平均体脂估算</text><text class="value-strong">{{ weeklyAvgFat }}</text></view>
-          <view class="row"><text class="muted">趋势变化</text><text class="value-strong">{{ weightTrendText }}</text></view>
-          <view class="row"><text class="muted">健康判断</text><text class="value-strong">{{ healthJudge }}</text></view>
-        </view>
+      <view class="section-card half">
+        <view class="section-title">一周状态摘要</view>
+        <view class="kv-row"><text>平均体重</text><text>{{ weeklyAvgWeight }}</text></view>
+        <view class="kv-row"><text>平均体脂估算</text><text>{{ weeklyAvgFat }}</text></view>
+        <view class="kv-row"><text>趋势变化</text><text>{{ weightTrendText }}</text></view>
+        <view class="kv-row"><text>健康判断</text><text>{{ healthJudge }}</text></view>
       </view>
     </view>
 
-    <view class="card">
-      <view class="row" style="margin-bottom: 16rpx;">
-        <view class="section-title">趋势图</view>
-        <view class="chip-group">
-          <view class="chip" :class="{ active: chartMode === 'weight' }" @click="chartMode = 'weight'">体重</view>
-          <view class="chip" :class="{ active: chartMode === 'body_fat' }" @click="chartMode = 'body_fat'">体脂估算</view>
-          <view class="chip" :class="{ active: chartMode === 'bmi' }" @click="chartMode = 'bmi'">BMI</view>
-        </view>
-      </view>
-      <view v-if="chartRecords.length >= 2" class="chart-box">
-        <svg class="chart-svg" viewBox="0 0 700 240" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#4f46e5" />
-              <stop offset="100%" stop-color="#06b6d4" />
-            </linearGradient>
-          </defs>
-          <line x1="50" y1="220" x2="650" y2="220" stroke="#dbeafe" stroke-width="2" />
-          <line x1="50" y1="30" x2="50" y2="220" stroke="#e5e7eb" stroke-width="2" />
-          <polygon :points="chartAreaPoints" fill="rgba(79,70,229,0.08)"></polygon>
+    <view class="section-card">
+      <view class="section-head"><view class="section-title">趋势图</view><view class="tab-row"><text class="tab" :class="{active: chartMode==='weight'}" @click="chartMode='weight'">体重</text><text class="tab" :class="{active: chartMode==='body_fat'}" @click="chartMode='body_fat'">体脂估算</text><text class="tab" :class="{active: chartMode==='bmi'}" @click="chartMode='bmi'">BMI</text></view></view>
+      <view v-if="pointNodes.length < 2" class="empty-text">暂无足够数据绘制趋势图，请先添加 2 条以上健康记录。</view>
+      <view v-else class="chart-box">
+        <svg class="chart-svg" viewBox="0 0 690 240">
+          <defs><linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#4f46e5"></stop><stop offset="100%" stop-color="#06b6d4"></stop></linearGradient></defs>
+          <polyline :points="chartAreaPoints" fill="rgba(79,70,229,0.08)" stroke="none"></polyline>
           <polyline :points="chartPoints" fill="none" stroke="url(#lineGradient)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
-          <g v-for="(p, index) in pointNodes" :key="index">
-            <circle :cx="p.x" :cy="p.y" r="5" fill="#fff" stroke="#4f46e5" stroke-width="3"></circle>
-            <text :x="p.x" :y="p.y - 10" text-anchor="middle" font-size="12" fill="#475569">{{ p.label }}</text>
-            <text :x="p.x" y="236" text-anchor="middle" font-size="11" fill="#94a3b8">{{ p.dateLabel }}</text>
+          <g v-for="(point, index) in pointNodes" :key="index">
+            <circle :cx="point.x" :cy="point.y" r="5" fill="#fff" stroke="#4f46e5" stroke-width="3"></circle>
+            <text :x="point.x" :y="point.y - 12" text-anchor="middle" font-size="12" fill="#334155">{{ point.label }}</text>
+            <text :x="point.x" y="228" text-anchor="middle" font-size="11" fill="#94a3b8">{{ point.dateLabel }}</text>
           </g>
         </svg>
       </view>
-      <view v-else class="empty">暂无足够数据绘制趋势图，请先添加 2 条以上健康记录。</view>
     </view>
 
-    <view class="card">
+    <view class="section-card">
       <view class="section-title">新增健康记录</view>
-      <view class="small muted" style="margin-bottom: 16rpx;">只需输入体重和当天状态。体脂率不再手填，系统会结合 BMI、年龄和性别自动估算。</view>
+      <view class="tips">除了体重，系统会自动计算 BMI、BMR 和体脂估算。</view>
       <view class="label">体重（kg）</view>
-      <input class="input" v-model="form.weight" placeholder="例如 59.5" type="digit" />
+      <input v-model="form.weight" class="input" placeholder="例如 59.5" />
       <view class="label">训练/状态备注</view>
-      <textarea class="input textarea" v-model="form.note" placeholder="例如：今天完成快走 40 分钟，状态不错"></textarea>
-      <view class="btn" @click="submitRecord">保存健康记录</view>
+      <textarea v-model="form.note" class="textarea" placeholder="例如：今天完成快走 40 分钟，状态不错"></textarea>
+      <view class="btn primary" @click="submitRecord">保存健康记录</view>
     </view>
 
-    <view class="card">
+    <view class="section-card">
       <view class="section-title">记录时间线</view>
       <view v-if="records.length">
-        <view class="timeline-item" v-for="item in records" :key="item.id">
+        <view v-for="item in records" :key="item.id" class="timeline-item">
           <view class="timeline-dot"></view>
           <view class="timeline-content">
-            <view class="row">
-              <view class="value-strong">{{ item.record_date }}</view>
-              <view class="small muted">{{ item.created_at }}</view>
-            </view>
-            <view class="course-meta">体重：{{ item.weight }} kg ｜ BMI：{{ item.bmi }} ｜ 体脂估算：{{ item.body_fat }}%</view>
-            <view class="small muted" v-if="item.note">备注：{{ item.note }}</view>
+            <view class="timeline-title">{{ item.record_date }} ｜ {{ item.weight }} kg</view>
+            <view class="timeline-desc">BMI：{{ item.bmi }} ｜ 体脂估算：{{ item.body_fat || '--' }}%</view>
+            <view class="timeline-note">{{ item.note || '暂无备注' }}</view>
           </view>
         </view>
       </view>
-      <view v-else class="empty">暂无健康记录</view>
+      <view v-else class="empty-text">暂无健康记录</view>
     </view>
   </view>
 </template>
 
 <script>
-import { request, getUserId, ensureLogin } from '@/utils/request.js'
+import { request } from '@/utils/request.js'
+import { getUserId } from '@/utils/session.js'
+import { getMyProfile } from '@/api/user.js'
+import { getRecordList, createRecord } from '@/api/records.js'
 
 export default {
   data() {
@@ -104,50 +86,30 @@ export default {
       profile: {},
       records: [],
       chartMode: 'weight',
-      form: {
-        weight: '',
-        note: ''
-      }
+      form: { weight: '', note: '' }
     }
   },
   computed: {
-    latestRecord() {
-      return this.records.length ? this.records[0] : null
-    },
-    recentCount() {
-      return this.records.slice(0, 7).length
-    },
+    latestRecord() { return this.records.length ? this.records[0] : null },
+    recentCount() { return this.records.slice(0, 7).length },
     goalProgress() {
       var current = Number(this.profile.current_weight || 0)
       var target = Number(this.profile.target_weight || 0)
       if (!current || !target) return 0
-      if (current === target) return 100
       var diff = Math.abs(current - target)
       var baseline = Math.max(current, target)
-      if (!baseline) return 0
-      var progress = Math.round((1 - diff / baseline) * 100)
-      if (progress < 0) progress = 0
-      if (progress > 100) progress = 100
-      return progress
+      return Math.max(0, Math.min(100, Math.round((1 - diff / baseline) * 100)))
     },
-    weeklyRecords() {
-      return this.records.slice(0, 7).reverse()
-    },
+    weeklyRecords() { return this.records.slice(0, 7).reverse() },
     weeklyAvgWeight() {
       if (!this.weeklyRecords.length) return '--'
-      var total = this.weeklyRecords.reduce(function(sum, item) {
-        return sum + Number(item.weight || 0)
-      }, 0)
+      var total = this.weeklyRecords.reduce((sum, item) => sum + Number(item.weight || 0), 0)
       return (total / this.weeklyRecords.length).toFixed(1) + ' kg'
     },
     weeklyAvgFat() {
-      var valid = this.weeklyRecords.filter(function(item) {
-        return item.body_fat !== null && item.body_fat !== '' && !isNaN(Number(item.body_fat))
-      })
+      var valid = this.weeklyRecords.filter(item => item.body_fat !== null && item.body_fat !== '' && !isNaN(Number(item.body_fat)))
       if (!valid.length) return '--'
-      var total = valid.reduce(function(sum, item) {
-        return sum + Number(item.body_fat || 0)
-      }, 0)
+      var total = valid.reduce((sum, item) => sum + Number(item.body_fat || 0), 0)
       return (total / valid.length).toFixed(1) + ' %'
     },
     weightTrendText() {
@@ -168,53 +130,37 @@ export default {
       if (bmi < 28) return '超重'
       return '肥胖风险'
     },
-    chartRecords() {
-      return this.records.slice(0, 7).reverse()
-    },
+    chartRecords() { return this.records.slice(0, 7).reverse() },
     pointNodes() {
       var list = this.chartRecords
       if (list.length < 2) return []
-
       var values = list.map(this.getChartValue)
       var max = Math.max.apply(null, values)
       var min = Math.min.apply(null, values)
       var gap = max - min || 1
-      var startX = 55
-      var endX = 635
-      var startY = 45
-      var endY = 205
+      var startX = 55, endX = 635, startY = 45, endY = 205
       var stepX = (endX - startX) / (list.length - 1)
-
-      return list.map(function(item, index) {
+      return list.map((item, index) => {
         var value = values[index]
         var x = startX + stepX * index
         var y = endY - ((value - min) / gap) * (endY - startY)
-        return {
-          x: Number(x.toFixed(2)),
-          y: Number(y.toFixed(2)),
-          label: isNaN(value) ? '--' : value.toFixed(1),
-          dateLabel: item.record_date ? item.record_date.slice(5) : '--'
-        }
+        return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), label: isNaN(value) ? '--' : value.toFixed(1), dateLabel: item.record_date ? item.record_date.slice(5) : '--' }
       })
     },
-    chartPoints() {
-      return this.pointNodes.map(function(item) {
-        return item.x + ',' + item.y
-      }).join(' ')
-    },
+    chartPoints() { return this.pointNodes.map(item => item.x + ',' + item.y).join(' ') },
     chartAreaPoints() {
       if (!this.pointNodes.length) return ''
-      var first = this.pointNodes[0]
-      var last = this.pointNodes[this.pointNodes.length - 1]
-      var main = this.pointNodes.map(function(item) {
-        return item.x + ',' + item.y
-      }).join(' ')
+      var first = this.pointNodes[0], last = this.pointNodes[this.pointNodes.length - 1]
+      var main = this.pointNodes.map(item => item.x + ',' + item.y).join(' ')
       return first.x + ',220 ' + main + ' ' + last.x + ',220'
     }
   },
   onShow() {
     this.userId = getUserId()
-    if (!ensureLogin()) return
+    if (!this.userId) {
+      uni.reLaunch({ url: '/pages/login/login' })
+      return
+    }
     this.loadProfile()
     this.loadRecords()
   },
@@ -226,75 +172,24 @@ export default {
     },
     loadProfile() {
       var that = this
-      request({
-        url: '/users/profile/?user_id=' + that.userId,
-        method: 'GET'
-      }).then(function(data) {
-        that.profile = data || {}
-      }).catch(function(err) {
-        console.log('加载档案失败 =>', err)
-        uni.showToast({ title: '档案加载失败', icon: 'none' })
-      })
+      getMyProfile(that.userId).then(function(data) { that.profile = data || {} }).catch(function(err) { console.log('profile error =>', err) })
     },
     loadRecords() {
       var that = this
-      request({
-        url: '/health/records/list/?user_id=' + that.userId,
-        method: 'GET'
-      }).then(function(data) {
-        if (typeof data === 'string') {
-          try {
-            data = JSON.parse(data)
-          } catch (e) {
-            data = []
-          }
-        }
-        that.records = Array.isArray(data) ? data : []
-      }).catch(function(err) {
-        console.log('加载记录失败 =>', err)
-        uni.showToast({ title: '记录加载失败', icon: 'none' })
-      })
+      getRecordList(that.userId).then(function(data) { that.records = Array.isArray(data) ? data : [] }).catch(function(err) { console.log('records error =>', err) })
     },
     submitRecord() {
       var that = this
-      if (!that.form.weight) {
-        uni.showToast({ title: '请输入体重', icon: 'none' })
-        return
-      }
-      if (isNaN(Number(that.form.weight))) {
-        uni.showToast({ title: '体重必须是数字', icon: 'none' })
-        return
-      }
+      if (!that.form.weight) { uni.showToast({ title: '请输入体重', icon: 'none' }); return }
+      if (isNaN(Number(that.form.weight))) { uni.showToast({ title: '体重必须是数字', icon: 'none' }); return }
       var weight = Number(that.form.weight)
-      if (weight < 30 || weight > 200) {
-        uni.showToast({ title: '体重请输入 30-200kg', icon: 'none' })
-        return
-      }
-      request({
-        url: '/health/records/',
-        method: 'POST',
-        data: {
-          user: that.userId,
-          weight: weight,
-          note: that.form.note || ''
-        }
-      }).then(function() {
+      if (weight < 30 || weight > 200) { uni.showToast({ title: '体重请输入 30-200kg', icon: 'none' }); return }
+      createRecord({ user: that.userId, weight: weight, note: that.form.note || '' }).then(function() {
         uni.showToast({ title: '记录已保存', icon: 'success' })
         that.form = { weight: '', note: '' }
         that.loadRecords()
       }).catch(function(err) {
-        console.log('保存健康记录失败 =>', err)
-        var msg = '保存失败'
-        if (err && err.data) {
-          if (typeof err.data === 'string') {
-            msg = err.data
-          } else if (err.data.weight && err.data.weight[0]) {
-            msg = err.data.weight[0]
-          } else if (err.data.user && err.data.user[0]) {
-            msg = err.data.user[0]
-          }
-        }
-        uni.showToast({ title: msg, icon: 'none' })
+        uni.showToast({ title: err.message || '保存失败', icon: 'none' })
       })
     }
   }
@@ -302,60 +197,39 @@ export default {
 </script>
 
 <style>
-.progress-track {
-  height: 12rpx;
-  background: #dbeafe;
-  border-radius: 999rpx;
-  overflow: hidden;
-  margin-top: 16rpx;
-}
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg,#14b8a6 0%,#3b82f6 100%);
-  border-radius: 999rpx;
-}
-.chip-group {
-  display: flex;
-  gap: 12rpx;
-}
-.chip {
-  padding: 10rpx 20rpx;
-  border-radius: 999rpx;
-  background: #eef2ff;
-  color: #4f46e5;
-  font-size: 24rpx;
-}
-.chip.active {
-  background: linear-gradient(90deg,#4f46e5 0%,#06b6d4 100%);
-  color: #fff;
-}
-.chart-box {
-  height: 320rpx;
-}
-.chart-svg {
-  width: 100%;
-  height: 100%;
-}
-.textarea {
-  height: 160rpx;
-  padding-top: 20rpx;
-}
-.timeline-item {
-  display: flex;
-  gap: 16rpx;
-  margin-bottom: 24rpx;
-}
-.timeline-dot {
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: 50%;
-  background: #4f46e5;
-  margin-top: 14rpx;
-  flex-shrink: 0;
-}
-.timeline-content {
-  flex: 1;
-  padding-bottom: 16rpx;
-  border-bottom: 1px solid #eef2ff;
-}
+.container { padding: 24rpx; background: #f3f6fb; min-height: 100vh; }
+.hero-card { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 55%, #06b6d4 100%); border-radius: 28rpx; padding: 28rpx; color: #fff; box-shadow: 0 18rpx 44rpx rgba(59,130,246,0.16); margin-bottom: 24rpx; }
+.hero-tag { display: inline-block; padding: 8rpx 16rpx; background: rgba(255,255,255,0.16); border-radius: 999rpx; font-size: 22rpx; margin-bottom: 14rpx; }
+.hero-title { font-size: 42rpx; font-weight: 800; }
+.hero-desc { font-size: 24rpx; color: #e0f2fe; line-height: 1.7; margin-top: 10rpx; }
+.hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16rpx; margin-top: 24rpx; }
+.hero-metric { background: rgba(255,255,255,0.14); border-radius: 22rpx; padding: 18rpx; }
+.metric-label { font-size: 22rpx; color: #dbeafe; }
+.metric-value { font-size: 42rpx; font-weight: 800; margin-top: 10rpx; }
+.metric-unit { font-size: 22rpx; color: #dbeafe; }
+.two-col { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
+.half { flex: 1; }
+.section-card { background: #fff; border-radius: 24rpx; padding: 24rpx; box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05); margin-bottom: 24rpx; }
+.section-title { font-size: 34rpx; font-weight: 800; color: #0f172a; margin-bottom: 18rpx; }
+.kv-row { display: flex; justify-content: space-between; margin-bottom: 14rpx; font-size: 28rpx; color: #334155; }
+.progress-bg { height: 14rpx; border-radius: 999rpx; background: #e2e8f0; overflow: hidden; margin-top: 12rpx; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #34d399 0%, #3b82f6 100%); }
+.tips { margin-top: 14rpx; font-size: 24rpx; color: #64748b; line-height: 1.6; }
+.section-head { display: flex; justify-content: space-between; align-items: center; }
+.tab-row { display: flex; gap: 12rpx; }
+.tab { padding: 8rpx 18rpx; border-radius: 999rpx; background: #eef2ff; color: #6366f1; font-size: 22rpx; }
+.tab.active { background: linear-gradient(90deg, #4f46e5, #0ea5e9); color: #fff; }
+.chart-box { width: 100%; overflow: hidden; }
+.chart-svg { width: 100%; height: 260rpx; }
+.input, .textarea { width: 100%; box-sizing: border-box; border-radius: 18rpx; border: 1px solid #e2e8f0; background: #f8fafc; padding: 20rpx; font-size: 28rpx; margin-bottom: 18rpx; }
+.textarea { min-height: 150rpx; }
+.label { font-size: 28rpx; color: #334155; font-weight: 600; margin-bottom: 10rpx; }
+.btn { text-align: center; border-radius: 18rpx; padding: 22rpx 0; font-size: 30rpx; font-weight: 700; }
+.primary { color: #fff; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+.timeline-item { display: flex; position: relative; padding-left: 24rpx; margin-bottom: 20rpx; }
+.timeline-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #4f46e5; margin-top: 12rpx; margin-right: 16rpx; flex-shrink: 0; }
+.timeline-content { flex: 1; background: #f8fafc; border-radius: 18rpx; padding: 16rpx; }
+.timeline-title { font-size: 28rpx; font-weight: 700; color: #0f172a; }
+.timeline-desc, .timeline-note { font-size: 24rpx; color: #64748b; margin-top: 8rpx; line-height: 1.6; }
+.empty-text { text-align: center; color: #94a3b8; padding: 40rpx 0; }
 </style>

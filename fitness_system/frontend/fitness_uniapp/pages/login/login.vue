@@ -18,7 +18,8 @@
 </template>
 
 <script>
-import { request, saveLogin } from '@/utils/request.js'
+import { request } from '@/utils/request.js'
+import { setUserInfo, clearSession } from '@/utils/session.js'
 
 export default {
   data() {
@@ -30,30 +31,79 @@ export default {
     }
   },
   methods: {
-    fillDemo() {
+    fillTestAccount() {
       this.form.username = 'test_mysql'
       this.form.password = '12345678Aa'
     },
     handleLogin() {
       var that = this
-      if (!that.form.username || !that.form.password) {
-        uni.showToast({ title: '请输入用户名和密码', icon: 'none' })
+
+      if (!that.form.username) {
+        uni.showToast({
+          title: '请输入用户名',
+          icon: 'none'
+        })
         return
       }
+
+      if (!that.form.password) {
+        uni.showToast({
+          title: '请输入密码',
+          icon: 'none'
+        })
+        return
+      }
+
+      // 先清掉旧会话，防止旧 user_id 干扰
+      clearSession()
+
       request({
         url: '/users/login/',
         method: 'POST',
-        data: that.form
+        data: {
+          username: that.form.username,
+          password: that.form.password
+        }
       }).then(function(data) {
-        saveLogin(data)
-        uni.showToast({ title: '登录成功', icon: 'success' })
-        setTimeout(function() {
-          uni.switchTab({ url: '/pages/index/index' })
-        }, 300)
+        console.log('login success =>', data)
+
+        if (data && data.user_id) {
+          setUserInfo(data)
+
+          uni.showToast({
+            title: '登录成功',
+            icon: 'success'
+          })
+
+          setTimeout(function() {
+            uni.switchTab({
+              url: '/pages/index/index'
+            })
+          }, 500)
+        } else {
+          uni.showToast({
+            title: (data && data.message) || '登录失败',
+            icon: 'none'
+          })
+        }
       }).catch(function(err) {
+        console.log('login error =>', err)
+
         var msg = '登录失败'
-        if (err && err.data && err.data.message) msg = err.data.message
-        uni.showToast({ title: msg, icon: 'none' })
+        if (err && err.data) {
+          if (typeof err.data === 'string') {
+            msg = err.data
+          } else if (err.data.message) {
+            msg = err.data.message
+          } else if (err.data.detail) {
+            msg = err.data.detail
+          }
+        }
+
+        uni.showToast({
+          title: msg,
+          icon: 'none'
+        })
       })
     }
   }

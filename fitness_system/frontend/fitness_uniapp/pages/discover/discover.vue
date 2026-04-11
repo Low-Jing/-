@@ -1,365 +1,191 @@
 <template>
   <view class="container">
     <view class="hero-card">
-      <view class="hero-tag">内容生态与社区模块</view>
+      <view class="hero-tag">内容生态与社区板块</view>
       <view class="hero-title">发现</view>
-      <view class="hero-desc">去掉搜索，把运营位、课程详情、知识正文和社区互动做完整，让发现页更像真正的内容型应用。</view>
+      <view class="hero-desc">去掉搜索，强化运营位、课程详情、知识正文和社区互动完整度，让发现页更像真正的内容型应用。</view>
     </view>
 
-    <view class="card banner-card">
-      <swiper class="banner-swiper" autoplay circular interval="3500" indicator-dots>
-        <swiper-item v-for="(item, index) in banners" :key="index">
-          <view class="banner-item" :style="{ backgroundImage: 'url(' + getBannerImage(item.image_key) + ')' }">
-            <view class="banner-mask">
-              <view class="banner-badge">{{ item.badge }}</view>
-              <view class="banner-title">{{ item.title }}</view>
-              <view class="banner-subtitle">{{ item.subtitle }}</view>
-            </view>
-          </view>
-        </swiper-item>
-      </swiper>
+    <swiper class="banner-swiper" circular autoplay indicator-dots>
+      <swiper-item v-for="(item, index) in banners" :key="index">
+        <view class="banner-card">
+          <view class="banner-badge">{{ item.badge }}</view>
+          <view class="banner-title">{{ item.title }}</view>
+          <view class="banner-subtitle">{{ item.subtitle }}</view>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <view class="section-card">
+      <view class="section-head"><view class="section-title">为你精选</view><view class="tag-chip">个性化发现</view></view>
+      <view class="pick-title">{{ editorPick.title || '本周精选' }}</view>
+      <view class="tag-list"><text v-for="(tag, index) in (editorPick.keywords || [])" :key="index" class="tag">{{ tag }}</text></view>
+      <view v-for="(item, index) in (editorPick.reasons || [])" :key="index" class="reason-line">{{ item }}</view>
     </view>
 
-    <view class="card" v-if="editorPick.keywords && editorPick.keywords.length">
-      <view class="row align-center">
-        <view class="section-title">为你精选</view>
-        <view class="small-pill">个性化发现</view>
-      </view>
-      <view class="pick-title">{{ editorPick.title }}</view>
-      <view class="tag-row">
-        <text class="tag" v-for="(item, index) in editorPick.keywords" :key="index">{{ item }}</text>
-      </view>
-      <view class="pick-reason" v-for="(item, index) in editorPick.reasons" :key="index">{{ item }}</view>
-    </view>
-
-    <view class="card">
+    <view class="section-card">
       <view class="section-title">功能频道</view>
-      <view class="grid-4">
-        <view class="grid-item" v-for="item in channels" :key="item.text" @click="switchTab(item.anchor)">
-          <view class="channel-box" :class="{ active: activeTab === item.anchor }">
-            <view class="channel-icon">{{ item.icon }}</view>
-            <view class="channel-text">{{ item.text }}</view>
-          </view>
+      <view class="channel-grid">
+        <view class="channel-item" v-for="(item, index) in channels" :key="index" @click="switchTab(item.anchor)">
+          <view class="channel-icon">{{ item.icon }}</view>
+          <view class="channel-text">{{ item.text }}</view>
         </view>
       </view>
     </view>
 
-    <view class="card">
-      <view class="tab-row">
-        <view class="tab-chip" :class="{ active: activeTab === 'all' }" @click="switchTab('all')">全部</view>
-        <view class="tab-chip" :class="{ active: activeTab === 'challenge' }" @click="switchTab('challenge')">挑战</view>
-        <view class="tab-chip" :class="{ active: activeTab === 'course' }" @click="switchTab('course')">课程</view>
-        <view class="tab-chip" :class="{ active: activeTab === 'article' }" @click="switchTab('article')">知识</view>
-        <view class="tab-chip" :class="{ active: activeTab === 'community' }" @click="switchTab('community')">社区</view>
-      </view>
+    <view class="tab-row">
+      <view class="tab" :class="{active: activeTab==='all'}" @click="activeTab='all'">全部</view>
+      <view class="tab" :class="{active: activeTab==='challenge'}" @click="activeTab='challenge'">挑战</view>
+      <view class="tab" :class="{active: activeTab==='course'}" @click="activeTab='course'">课程</view>
+      <view class="tab" :class="{active: activeTab==='article'}" @click="activeTab='article'">知识</view>
+      <view class="tab" :class="{active: activeTab==='community'}" @click="activeTab='community'">社区</view>
     </view>
 
-    <view class="card" v-if="showChallenges">
-      <view class="row align-center">
-        <view class="section-title">热门挑战</view>
-        <view class="muted small" @click="loadDiscover">刷新</view>
+    <view v-if="activeTab==='all' || activeTab==='challenge'" class="section-card">
+      <view class="section-head"><view class="section-title">热门挑战</view><view class="refresh-link" @click="loadDiscover">刷新</view></view>
+      <view class="challenge-card" v-for="item in challenges" :key="'c'+item.id" @click="openDetail('challenge', item)">
+        <view class="challenge-title">{{ item.title }}</view>
+        <view class="challenge-desc">{{ item.description }}</view>
+        <view class="challenge-meta"><text>{{ item.people_text || item.participant_text }}</text><text>{{ item.days }} 天</text></view>
       </view>
-      <view v-if="challenges.length">
-        <view class="challenge-card" v-for="item in challenges" :key="item.id" :style="{ background: item.theme_color || 'linear-gradient(135deg,#2563eb 0%,#06b6d4 100%)' }" @click="openDetail('challenge', item)">
-          <view class="row align-start">
-            <view class="flex-1 pr16">
-              <view class="card-title white">{{ item.title }}</view>
-              <view class="card-desc white opacity">{{ item.description }}</view>
-              <view class="meta-line white opacity">参与人数 {{ item.people_text || item.participant_count }} · 连续 {{ item.days }} 天</view>
-            </view>
-            <view class="badge-light">{{ item.tag || '挑战' }}</view>
-          </view>
-          <view class="action-row">
-            <view class="action-meta white opacity">点击查看详情与任务安排</view>
-            <view class="action-btn" :class="{ active: item.joined }" @click.stop="toggleChallenge(item)">{{ item.joined ? '已报名' : '立即报名' }}</view>
-          </view>
-        </view>
-      </view>
-      <view v-else class="empty">暂无挑战数据</view>
+      <view v-if="!challenges.length" class="empty-text">暂无挑战数据</view>
     </view>
 
-    <view class="card" v-if="showTopics">
+    <view v-if="activeTab==='all' || activeTab==='course'" class="section-card">
       <view class="section-title">专题课程</view>
-      <view v-if="topics.length">
-        <view class="list-card rich-card" v-for="item in topics" :key="item.id" @click="openDetail('course', item)">
-          <view class="row align-center">
-            <view class="card-title">{{ item.title }}</view>
-            <view class="badge-light">{{ item.level || '课程' }}</view>
-          </view>
-          <view class="card-desc">{{ item.description }}</view>
-          <view class="tag-row">
-            <text class="tag" v-for="tag in (item.tag_list || [])" :key="tag">{{ tag }}</text>
-          </view>
-          <view class="meta-line">{{ item.coach_name }} · {{ item.duration_text }}</view>
-          <view class="action-row border-top">
-            <view class="action-meta">点进卡片查看完整课程大纲</view>
-            <view class="action-btn outline" :class="{ active: item.favorited }" @click.stop="toggleCourse(item)">{{ item.favorited ? '已收藏' : '收藏课程' }}</view>
-          </view>
-        </view>
+      <view class="content-card" v-for="item in topics" :key="'t'+item.id" @click="openDetail('course', item)">
+        <view class="content-title">{{ item.title }}</view>
+        <view class="content-desc">{{ item.description }}</view>
       </view>
-      <view v-else class="empty">暂无课程数据</view>
+      <view v-if="!topics.length" class="empty-text">暂无课程数据</view>
     </view>
 
-    <view class="grid-2" v-if="showArticles || showFeeds">
-      <view class="grid-item-2" v-if="showArticles">
-        <view class="card full-height">
-          <view class="section-title">知识文章</view>
-          <view v-if="articles.length">
-            <view class="list-card rich-card" v-for="item in articles" :key="item.id" @click="openDetail('article', item)">
-              <view class="row align-center">
-                <view class="card-title">{{ item.title }}</view>
-                <view class="badge-light">{{ item.category }}</view>
-              </view>
-              <view class="card-desc">{{ item.summary }}</view>
-              <view class="meta-line">{{ item.author }} · {{ item.read_minutes }} 分钟阅读</view>
-              <view class="action-row border-top">
-                <view class="action-meta">点进卡片查看正文与要点</view>
-                <view class="action-btn outline" :class="{ active: item.favorited }" @click.stop="toggleArticle(item)">{{ item.favorited ? '已收藏' : '收藏文章' }}</view>
-              </view>
-            </view>
-          </view>
-          <view v-else class="empty">暂无文章数据</view>
-        </view>
+    <view v-if="activeTab==='all' || activeTab==='article'" class="section-card">
+      <view class="section-title">营养知识</view>
+      <view class="content-card" v-for="item in articles" :key="'a'+item.id" @click="openDetail('article', item)">
+        <view class="content-title">{{ item.title }}</view>
+        <view class="content-desc">{{ item.summary }}</view>
       </view>
-
-      <view class="grid-item-2" v-if="showFeeds">
-        <view class="card full-height">
-          <view class="section-title">社区动态</view>
-          <view v-if="feeds.length">
-            <view class="list-card rich-card" v-for="item in feeds" :key="item.id" @click="openDetail('post', item)">
-              <view class="row align-center">
-                <view class="card-title">{{ item.nickname }}</view>
-                <view class="badge-light">{{ item.time_text }}</view>
-              </view>
-              <view class="card-desc">{{ item.content }}</view>
-              <view class="meta-line">{{ item.total_likes || item.like_count }} 赞 · {{ item.comment_count }} 评论 · {{ item.topic_label }}</view>
-              <view class="action-row border-top">
-                <view class="action-meta">点进卡片查看互动详情</view>
-                <view class="action-btn outline" :class="{ active: item.liked }" @click.stop="togglePost(item)">{{ item.liked ? '已点赞' : '点赞' }}</view>
-              </view>
-            </view>
-          </view>
-          <view v-else class="empty">暂无社区动态</view>
-        </view>
-      </view>
+      <view v-if="!articles.length" class="empty-text">暂无文章数据</view>
     </view>
 
-    <view class="mask" v-if="showDetail" @click="closeDetail"></view>
-    <view class="detail-panel" v-if="showDetail">
-      <view class="row align-center mb16">
-        <view class="section-title no-margin">{{ detailTitle }}</view>
-        <view class="muted small" @click="closeDetail">关闭</view>
+    <view v-if="activeTab==='all' || activeTab==='community'" class="section-card">
+      <view class="section-title">社区动态</view>
+      <view class="content-card" v-for="item in feeds" :key="'f'+item.id" @click="openDetail('community', item)">
+        <view class="content-title">{{ item.nickname }}</view>
+        <view class="content-desc">{{ item.content }}</view>
       </view>
-      <view class="detail-main-title">{{ detailMainTitle }}</view>
-      <view class="detail-subtitle" v-if="detailSubtitle">{{ detailSubtitle }}</view>
-      <view class="tag-row" v-if="detailTags.length">
-        <text class="tag" v-for="item in detailTags" :key="item">{{ item }}</text>
-      </view>
-      <view class="detail-body" v-if="detailDescription">{{ detailDescription }}</view>
+      <view v-if="!feeds.length" class="empty-text">暂无社区动态</view>
+    </view>
 
-      <view v-if="detailType === 'challenge'">
-        <view class="detail-block" v-for="(item, index) in (detailItem.detail_sections || [])" :key="index">
-          <view class="detail-block-title">{{ item.title }}</view>
-          <view class="detail-body">{{ item.content }}</view>
-        </view>
-        <view class="detail-block" v-if="detailItem.task_list && detailItem.task_list.length">
-          <view class="detail-block-title">挑战任务</view>
-          <view class="bullet-row" v-for="(task, index) in detailItem.task_list" :key="index">• {{ task }}</view>
-        </view>
-      </view>
-
-      <view v-if="detailType === 'course'">
-        <view class="detail-block" v-if="detailItem.full_content">
-          <view class="detail-block-title">课程介绍</view>
-          <view class="detail-body multiline">{{ detailItem.full_content }}</view>
-        </view>
-        <view class="detail-block" v-if="detailItem.lesson_points && detailItem.lesson_points.length">
-          <view class="detail-block-title">课程大纲</view>
-          <view class="bullet-row" v-for="(lesson, index) in detailItem.lesson_points" :key="index">• {{ lesson }}</view>
-        </view>
-      </view>
-
-      <view v-if="detailType === 'article'">
-        <view class="detail-block">
-          <view class="detail-block-title">正文内容</view>
-          <view class="detail-body multiline" v-for="(block, index) in (detailItem.article_blocks || [])" :key="index">{{ block }}</view>
-        </view>
-        <view class="detail-block" v-if="detailItem.takeaways && detailItem.takeaways.length">
-          <view class="detail-block-title">阅读要点</view>
-          <view class="bullet-row" v-for="(point, index) in detailItem.takeaways" :key="index">• {{ point }}</view>
-        </view>
-      </view>
-
-      <view v-if="detailType === 'post'">
-        <view class="detail-block" v-if="detailItem.comments_preview && detailItem.comments_preview.length">
-          <view class="detail-block-title">评论预览</view>
-          <view class="comment-box" v-for="(c, index) in detailItem.comments_preview" :key="index">
-            <view class="comment-name">{{ c.nickname }}</view>
-            <view class="comment-text">{{ c.text }}</view>
+    <view v-if="detailVisible" class="popup-mask" @click="closeDetail">
+      <view class="popup-panel" @click.stop>
+        <view class="popup-title">{{ detailItem.title || detailItem.nickname }}</view>
+        <scroll-view scroll-y class="popup-scroll">
+          <view v-if="detailType==='challenge'">
+            <view class="popup-desc">{{ detailItem.detail_intro || detailItem.description }}</view>
+            <view v-for="(block, idx) in (detailItem.detail_sections || [])" :key="idx" class="popup-block">
+              <view class="popup-block-title">{{ block.title }}</view>
+              <view class="popup-block-desc">{{ block.content }}</view>
+            </view>
           </view>
+          <view v-else-if="detailType==='course'">
+            <view class="popup-desc">{{ detailItem.full_content || detailItem.description }}</view>
+            <view v-for="(point, idx) in (detailItem.lesson_points || [])" :key="idx" class="popup-block-desc">• {{ point }}</view>
+          </view>
+          <view v-else-if="detailType==='article'">
+            <view v-for="(block, idx) in (detailItem.article_blocks || [])" :key="idx" class="popup-block-desc">{{ block }}</view>
+          </view>
+          <view v-else>
+            <view class="popup-desc">{{ detailItem.content }}</view>
+            <view v-for="(comment, idx) in (detailItem.comments_preview || [])" :key="idx" class="popup-block-desc">{{ comment.nickname }}：{{ comment.text }}</view>
+          </view>
+        </scroll-view>
+        <view class="btn-row">
+          <view v-if="detailType==='challenge'" class="btn primary" @click="doToggleChallenge(detailItem)">{{ detailItem.joined ? '取消报名' : '立即报名' }}</view>
+          <view v-if="detailType==='course'" class="btn primary" @click="doToggleCourse(detailItem)">{{ detailItem.favorited ? '取消收藏' : '收藏课程' }}</view>
+          <view v-if="detailType==='article'" class="btn primary" @click="doToggleArticle(detailItem)">{{ detailItem.favorited ? '取消收藏' : '收藏文章' }}</view>
+          <view v-if="detailType==='community'" class="btn primary" @click="doTogglePost(detailItem)">{{ detailItem.liked ? '取消点赞' : '点赞动态' }}</view>
+          <view class="btn light" @click="closeDetail">关闭</view>
         </view>
-      </view>
-
-      <view class="detail-actions">
-        <view v-if="detailType === 'challenge'" class="detail-btn primary" @click="toggleChallenge(detailItem, true)">{{ detailItem.joined ? '取消报名' : '立即报名' }}</view>
-        <view v-if="detailType === 'course'" class="detail-btn primary" @click="toggleCourse(detailItem, true)">{{ detailItem.favorited ? '取消收藏' : '收藏课程' }}</view>
-        <view v-if="detailType === 'article'" class="detail-btn primary" @click="toggleArticle(detailItem, true)">{{ detailItem.favorited ? '取消收藏' : '收藏文章' }}</view>
-        <view v-if="detailType === 'post'" class="detail-btn primary" @click="togglePost(detailItem, true)">{{ detailItem.liked ? '取消点赞' : '点赞动态' }}</view>
       </view>
     </view>
   </view>
 </template>
 
 <script>
-import { request, requestSafe, ensureLogin, getUserId } from '@/utils/request.js'
+import { request } from '@/utils/request.js'
+import { getUserId } from '@/utils/session.js'
+import { getDiscoverHome, toggleChallengeJoin, toggleCourseFavorite, toggleArticleFavorite, togglePostLike } from '@/api/discover.js'
 
 export default {
   data() {
     return {
-      userId: '',
-      activeTab: 'all',
-      theme: { title: '发现', desc: '内容型应用入口' },
-      banners: [],
-      channels: [],
-      editorPick: { keywords: [], reasons: [] },
-      challenges: [],
-      topics: [],
-      articles: [],
-      feeds: [],
-      showDetail: false,
-      detailType: '',
-      detailItem: {}
-    }
-  },
-  computed: {
-    showChallenges() { return this.activeTab === 'all' || this.activeTab === 'challenge' },
-    showTopics() { return this.activeTab === 'all' || this.activeTab === 'course' },
-    showArticles() { return this.activeTab === 'all' || this.activeTab === 'article' },
-    showFeeds() { return this.activeTab === 'all' || this.activeTab === 'community' },
-    detailTitle() {
-      var map = { challenge: '挑战详情', course: '课程详情', article: '知识正文', post: '社区动态' }
-      return map[this.detailType] || '内容详情'
-    },
-    detailMainTitle() {
-      return this.detailItem.cover_title || this.detailItem.headline || this.detailItem.title || this.detailItem.nickname || '-'
-    },
-    detailSubtitle() {
-      if (this.detailType === 'challenge') return '挑战详情与任务说明'
-      if (this.detailType === 'course') return this.detailItem.duration_text || ''
-      if (this.detailType === 'article') return (this.detailItem.author || '') + ' · ' + (this.detailItem.read_minutes || 5) + ' 分钟阅读'
-      if (this.detailType === 'post') return this.detailItem.time_text || ''
-      return ''
-    },
-    detailTags() {
-      if (this.detailType === 'course') return this.detailItem.tag_list || []
-      if (this.detailType === 'challenge') return [this.detailItem.tag || '挑战', (this.detailItem.days || 7) + '天']
-      if (this.detailType === 'article') return [this.detailItem.category || '知识']
-      if (this.detailType === 'post') return [String(this.detailItem.total_likes || this.detailItem.like_count || 0) + '赞', String(this.detailItem.comment_count || 0) + '评论']
-      return []
-    },
-    detailDescription() {
-      return this.detailItem.detail_intro || this.detailItem.description || this.detailItem.summary || this.detailItem.content || ''
+      userId: '', banners: [], channels: [], editorPick: {}, challenges: [], topics: [], articles: [], feeds: [], activeTab: 'all',
+      detailVisible: false, detailType: '', detailItem: {}
     }
   },
   onShow() {
-    if (!ensureLogin()) return
-    this.userId = getUserId()
+    this.userId = getUserId() || ''
     this.loadDiscover()
   },
   methods: {
-    getBannerImage(key) {
-      var map = {
-        banner1: '/static/discover/banner1.svg',
-        banner2: '/static/discover/banner2.svg',
-        banner3: '/static/discover/banner3.svg'
-      }
-      return map[key] || '/static/discover/banner1.svg'
-    },
-    switchTab(value) {
-      this.activeTab = value
-    },
     loadDiscover() {
       var that = this
-      requestSafe({
-        url: '/discover/home/?user_id=' + that.userId,
-        method: 'GET'
-      }, {}).then(function(data) {
-        that.theme = data.theme || that.theme
+      getDiscoverHome(that.userId).then(function(data) {
         that.banners = data.banners || []
         that.channels = data.channels || []
-        that.editorPick = data.editor_pick || { keywords: [], reasons: [] }
+        that.editorPick = data.editor_pick || {}
         that.challenges = data.challenges || []
         that.topics = data.topics || []
         that.articles = data.articles || []
         that.feeds = data.feeds || []
+      }).catch(function(err) {
+        console.log('discover error =>', err)
+        uni.showToast({ title: '发现页加载失败', icon: 'none' })
       })
+    },
+    switchTab(anchor) {
+      this.activeTab = anchor || 'all'
     },
     openDetail(type, item) {
       this.detailType = type
-      this.detailItem = item
-      this.showDetail = true
+      this.detailItem = Object.assign({}, item)
+      this.detailVisible = true
     },
     closeDetail() {
-      this.showDetail = false
-      this.detailType = ''
-      this.detailItem = {}
+      this.detailVisible = false
     },
-    toggleChallenge(item, fromDetail) {
+    doToggleChallenge(item) {
       var that = this
-      request({
-        url: '/discover/challenge/toggle-join/',
-        method: 'POST',
-        data: { user_id: that.userId, challenge_id: item.id }
-      }).then(function(data) {
-        item.joined = data.active
-        item.people_text = data.people_text || item.people_text
-        if (fromDetail) that.detailItem = item
-        uni.showToast({ title: data.active ? '报名成功' : '已取消', icon: 'none' })
-      }).catch(function() {
-        uni.showToast({ title: '操作失败', icon: 'none' })
+      toggleChallengeJoin(that.userId, item.id).then(function(data) {
+        uni.showToast({ title: data.active ? '报名成功' : '已取消报名', icon: 'none' })
+        that.loadDiscover()
+        that.detailItem.joined = !!data.active
       })
     },
-    toggleCourse(item, fromDetail) {
+    doToggleCourse(item) {
       var that = this
-      request({
-        url: '/discover/course/toggle-favorite/',
-        method: 'POST',
-        data: { user_id: that.userId, course_id: item.id }
-      }).then(function(data) {
-        item.favorited = data.active
-        if (fromDetail) that.detailItem = item
-        uni.showToast({ title: data.active ? '已收藏' : '已取消', icon: 'none' })
-      }).catch(function() {
-        uni.showToast({ title: '操作失败', icon: 'none' })
+      toggleCourseFavorite(that.userId, item.id).then(function(data) {
+        uni.showToast({ title: data.active ? '收藏成功' : '已取消收藏', icon: 'none' })
+        that.loadDiscover()
+        that.detailItem.favorited = !!data.active
       })
     },
-    toggleArticle(item, fromDetail) {
+    doToggleArticle(item) {
       var that = this
-      request({
-        url: '/discover/article/toggle-favorite/',
-        method: 'POST',
-        data: { user_id: that.userId, article_id: item.id }
-      }).then(function(data) {
-        item.favorited = data.active
-        if (fromDetail) that.detailItem = item
-        uni.showToast({ title: data.active ? '已收藏' : '已取消', icon: 'none' })
-      }).catch(function() {
-        uni.showToast({ title: '操作失败', icon: 'none' })
+      toggleArticleFavorite(that.userId, item.id).then(function(data) {
+        uni.showToast({ title: data.active ? '收藏成功' : '已取消收藏', icon: 'none' })
+        that.loadDiscover()
+        that.detailItem.favorited = !!data.active
       })
     },
-    togglePost(item, fromDetail) {
+    doTogglePost(item) {
       var that = this
-      request({
-        url: '/discover/post/toggle-like/',
-        method: 'POST',
-        data: { user_id: that.userId, post_id: item.id }
-      }).then(function(data) {
-        item.liked = data.active
-        item.total_likes = data.count || item.total_likes
-        if (fromDetail) that.detailItem = item
-        uni.showToast({ title: data.active ? '已点赞' : '已取消', icon: 'none' })
-      }).catch(function() {
-        uni.showToast({ title: '操作失败', icon: 'none' })
+      togglePostLike(that.userId, item.id).then(function(data) {
+        uni.showToast({ title: data.active ? '点赞成功' : '已取消点赞', icon: 'none' })
+        that.loadDiscover()
+        that.detailItem.liked = !!data.active
       })
     }
   }
@@ -367,76 +193,48 @@ export default {
 </script>
 
 <style>
-.container { padding: 24rpx; }
-.hero-card { background: linear-gradient(135deg, #4f46e5, #22c1dc); border-radius: 28rpx; padding: 28rpx; color: #fff; margin-bottom: 24rpx; }
+.container { padding: 24rpx; background: #f3f6fb; min-height: 100vh; }
+.hero-card, .banner-card { background: linear-gradient(135deg, #4f46e5, #22c1dc); border-radius: 28rpx; padding: 28rpx; color: #fff; }
+.hero-card { margin-bottom: 24rpx; }
 .hero-tag { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 14rpx; }
 .hero-title { font-size: 42rpx; font-weight: 700; }
 .hero-desc { font-size: 24rpx; margin-top: 10rpx; line-height: 1.7; }
-.card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 10rpx 24rpx rgba(15, 23, 42, 0.05); }
-.banner-card { padding: 0; overflow: hidden; }
-.banner-swiper { height: 280rpx; }
-.banner-item { width: 100%; height: 100%; background-size: cover; background-position: center; }
-.banner-mask { width: 100%; height: 100%; background: linear-gradient(90deg, rgba(15,23,42,.25), rgba(15,23,42,.05)); padding: 28rpx; box-sizing: border-box; color: #fff; }
-.banner-badge { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 14rpx; }
-.banner-title { font-size: 38rpx; font-weight: 700; margin-bottom: 10rpx; }
-.banner-subtitle { font-size: 24rpx; line-height: 1.7; width: 78%; }
-.row { display: flex; justify-content: space-between; }
-.align-center { align-items: center; }
-.align-start { align-items: flex-start; }
-.flex-1 { flex: 1; }
-.pr16 { padding-right: 16rpx; }
-.mb16 { margin-bottom: 16rpx; }
-.section-title { font-size: 34rpx; font-weight: 700; margin-bottom: 18rpx; }
-.no-margin { margin-bottom: 0; }
-.small { font-size: 24rpx; }
-.muted { color: #94a3b8; }
-.small-pill { padding: 8rpx 16rpx; border-radius: 999rpx; background: #eef2ff; color: #4f46e5; font-size: 22rpx; }
-.pick-title { font-size: 30rpx; font-weight: 700; margin-bottom: 12rpx; }
-.pick-reason { font-size: 24rpx; color: #475569; line-height: 1.7; margin-bottom: 10rpx; }
-.grid-4 { display: flex; flex-wrap: wrap; margin: 0 -8rpx; }
-.grid-item { width: 25%; padding: 8rpx; box-sizing: border-box; }
-.channel-box { background: #f8fafc; border-radius: 18rpx; padding: 20rpx 10rpx; text-align: center; border: 2rpx solid transparent; }
-.channel-box.active { border-color: #4f46e5; background: #eef2ff; }
-.channel-icon { font-size: 34rpx; margin-bottom: 10rpx; }
-.channel-text { font-size: 24rpx; color: #334155; }
-.tab-row { display: flex; gap: 12rpx; flex-wrap: wrap; }
-.tab-chip { padding: 10rpx 18rpx; border-radius: 999rpx; background: #f1f5f9; color: #475569; font-size: 24rpx; }
-.tab-chip.active { background: linear-gradient(90deg, #3b82f6, #6366f1); color: #fff; }
-.challenge-card { border-radius: 24rpx; padding: 24rpx; color: #fff; margin-bottom: 18rpx; }
-.card-title { font-size: 30rpx; font-weight: 700; }
-.card-desc { font-size: 24rpx; color: #475569; line-height: 1.7; margin-top: 8rpx; }
-.white { color: #fff; }
-.opacity { opacity: 0.92; }
-.meta-line { font-size: 22rpx; margin-top: 12rpx; color: #64748b; }
-.badge-light { padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,.2); font-size: 22rpx; color: #fff; }
-.rich-card { border: 1px solid #eef2ff; }
-.list-card { background: #fff; border-radius: 20rpx; padding: 18rpx; margin-bottom: 16rpx; }
-.tag-row { margin-top: 12rpx; }
+.banner-swiper { height: 220rpx; margin-bottom: 24rpx; }
+.banner-badge { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 18rpx; }
+.banner-title { font-size: 40rpx; font-weight: 700; }
+.banner-subtitle { margin-top: 10rpx; font-size: 24rpx; color: #e0f2fe; }
+.section-card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05); }
+.section-head { display: flex; justify-content: space-between; align-items: center; }
+.section-title { font-size: 34rpx; font-weight: 700; margin-bottom: 16rpx; }
+.tag-chip { padding: 8rpx 16rpx; border-radius: 999rpx; background: #eef2ff; color: #4f46e5; font-size: 22rpx; }
+.pick-title { font-size: 30rpx; font-weight: 700; color: #0f172a; }
+.tag-list { margin-top: 12rpx; }
 .tag { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: #eef2ff; color: #4f46e5; font-size: 22rpx; margin-right: 10rpx; margin-bottom: 10rpx; }
-.action-row { display: flex; justify-content: space-between; align-items: center; margin-top: 18rpx; }
-.action-meta { font-size: 22rpx; color: #94a3b8; }
-.action-btn { padding: 10rpx 18rpx; border-radius: 999rpx; background: rgba(255,255,255,.92); color: #2563eb; font-size: 22rpx; }
-.action-btn.outline { background: #eef2ff; color: #4f46e5; }
-.action-btn.active { background: #10b981; color: #fff; }
-.border-top { border-top: 1px solid #f1f5f9; padding-top: 14rpx; }
-.grid-2 { display: flex; gap: 20rpx; margin-bottom: 24rpx; }
-.grid-item-2 { flex: 1; }
-.full-height { height: 100%; }
-.empty { text-align: center; color: #94a3b8; padding: 36rpx 0; }
-.mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.45); z-index: 99; }
-.detail-panel { position: fixed; left: 24rpx; right: 24rpx; top: 80rpx; bottom: 30rpx; background: #fff; border-radius: 28rpx; padding: 24rpx; z-index: 100; overflow-y: auto; box-shadow: 0 24rpx 60rpx rgba(15, 23, 42, 0.18); }
-.detail-main-title { font-size: 34rpx; font-weight: 700; margin-bottom: 10rpx; }
-.detail-subtitle { font-size: 24rpx; color: #64748b; margin-bottom: 12rpx; }
-.detail-body { font-size: 26rpx; color: #334155; line-height: 1.8; margin-top: 10rpx; }
-.multiline { margin-bottom: 12rpx; }
-.detail-block { background: #f8fafc; border-radius: 18rpx; padding: 18rpx; margin-top: 14rpx; }
-.detail-block-title { font-size: 28rpx; font-weight: 700; margin-bottom: 8rpx; }
-.bullet-row { font-size: 24rpx; color: #475569; line-height: 1.8; margin-top: 6rpx; }
-.comment-box { background: #fff; border-radius: 16rpx; padding: 16rpx; margin-top: 10rpx; border: 1px solid #e2e8f0; }
-.comment-name { font-size: 24rpx; font-weight: 700; margin-bottom: 6rpx; }
-.comment-text { font-size: 24rpx; color: #475569; line-height: 1.7; }
-.detail-actions { margin-top: 22rpx; }
-.detail-btn { text-align: center; border-radius: 18rpx; padding: 22rpx 0; font-size: 28rpx; font-weight: 700; }
-.detail-btn.primary { color: #fff; background: linear-gradient(90deg, #3b82f6, #6366f1); }
-@media screen and (max-width: 768px) { .grid-item { width: 50%; } .grid-2 { display:block; } .grid-item-2 { margin-bottom: 20rpx; } }
+.reason-line { font-size: 24rpx; color: #475569; margin-top: 10rpx; }
+.channel-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16rpx; }
+.channel-item { background: #f8fafc; border-radius: 20rpx; padding: 24rpx 0; text-align: center; }
+.channel-icon { font-size: 34rpx; margin-bottom: 8rpx; }
+.channel-text { font-size: 24rpx; color: #334155; }
+.tab-row { display: flex; gap: 12rpx; margin-bottom: 20rpx; }
+.tab { padding: 10rpx 20rpx; border-radius: 999rpx; background: #fff; color: #475569; font-size: 24rpx; }
+.tab.active { background: linear-gradient(90deg, #3b82f6, #6366f1); color: #fff; }
+.refresh-link { color: #64748b; font-size: 24rpx; }
+.challenge-card { background: linear-gradient(90deg, #2563eb, #06b6d4); border-radius: 20rpx; padding: 22rpx; color: #fff; margin-bottom: 14rpx; }
+.challenge-title, .content-title { font-size: 30rpx; font-weight: 700; }
+.challenge-desc, .content-desc { font-size: 24rpx; margin-top: 8rpx; line-height: 1.6; }
+.challenge-meta { display: flex; justify-content: space-between; font-size: 22rpx; margin-top: 12rpx; opacity: 0.95; }
+.content-card { background: #f8fafc; border-radius: 20rpx; padding: 20rpx; margin-bottom: 12rpx; }
+.empty-text { text-align: center; color: #94a3b8; padding: 30rpx 0; }
+.popup-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.42); display: flex; align-items: center; justify-content: center; z-index: 99; }
+.popup-panel { width: 86%; max-height: 78vh; background: #fff; border-radius: 24rpx; padding: 24rpx; }
+.popup-title { font-size: 34rpx; font-weight: 700; color: #0f172a; margin-bottom: 14rpx; }
+.popup-scroll { max-height: 52vh; }
+.popup-desc { font-size: 26rpx; color: #334155; line-height: 1.8; margin-bottom: 12rpx; }
+.popup-block { margin-bottom: 14rpx; }
+.popup-block-title { font-size: 28rpx; font-weight: 700; color: #0f172a; margin-bottom: 8rpx; }
+.popup-block-desc { font-size: 24rpx; color: #475569; line-height: 1.7; margin-bottom: 8rpx; }
+.btn-row { display: flex; gap: 16rpx; margin-top: 20rpx; }
+.btn { flex: 1; text-align: center; border-radius: 18rpx; padding: 20rpx 0; font-size: 28rpx; font-weight: 700; }
+.btn.primary { color: #fff; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+.btn.light { color: #334155; background: #f1f5f9; }
 </style>

@@ -3,8 +3,13 @@ from rest_framework import serializers
 from .models import UserProfile
 
 
+from django.contrib.auth.models import User
+from rest_framework import serializers
+from .models import UserProfile
+
+
 class UserRegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=6)
     age = serializers.IntegerField(write_only=True)
     gender = serializers.CharField(write_only=True)
     height = serializers.FloatField(write_only=True)
@@ -24,6 +29,31 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             'goal_type', 'exercise_preference', 'diet_preference',
             'dislike_items', 'available_time'
         ]
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('该用户名已存在，请更换用户名。')
+        return value
+
+    def validate_age(self, value):
+        if value < 10 or value > 100:
+            raise serializers.ValidationError('年龄应在 10 到 100 之间。')
+        return value
+
+    def validate_height(self, value):
+        if value < 100 or value > 250:
+            raise serializers.ValidationError('身高应在 100cm 到 250cm 之间。')
+        return value
+
+    def validate_current_weight(self, value):
+        if value < 30 or value > 200:
+            raise serializers.ValidationError('当前体重应在 30kg 到 200kg 之间。')
+        return value
+
+    def validate_target_weight(self, value):
+        if value < 30 or value > 200:
+            raise serializers.ValidationError('目标体重应在 30kg 到 200kg 之间。')
+        return value
 
     def create(self, validated_data):
         profile_data = {

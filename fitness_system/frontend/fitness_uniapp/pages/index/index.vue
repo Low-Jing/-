@@ -4,7 +4,7 @@
       <view class="tag" style="background: rgba(255,255,255,0.16); color:#fff;">今日健康主场</view>
       <view class="title">你好，{{ dashboard.profile.username || userInfo.username || '用户' }}</view>
       <view class="small" style="opacity:0.92; margin-bottom: 20rpx;">
-        把训练、饮食和连续打卡放在同一个仪表盘里，做成更像产品而不是简单页面。
+        
       </view>
       <view style="display:flex; gap:20rpx;">
         <view class="card" style="flex:1; background: rgba(255,255,255,0.14); margin-bottom:0;">

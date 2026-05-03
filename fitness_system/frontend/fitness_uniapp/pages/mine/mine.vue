@@ -12,7 +12,7 @@
             <view class="small">{{ profile.goal_type || '目标待完善' }} ｜ {{ profile.available_time || '时间待完善' }}</view>
           </view>
         </view>
-        <view class="tag" style="background:rgba(255,255,255,0.16); color:#fff;">{{ growth.stage || '内容推荐' }}</view>
+        <view class="tag" style="background:rgba(255,255,255,0.16); color:#fff;">{{  }}</view>
       </view>
     </view>
 

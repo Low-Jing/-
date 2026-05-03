@@ -3,7 +3,7 @@
     <view class="hero-card">
       <view class="hero-tag">数据驱动健康中心</view>
       <view class="hero-title">健康记录与趋势分析</view>
-      <view class="hero-desc">把体重、BMI 和状态备注串成一条可视化轨迹，让“记录”更像产品，而不是只显示一行表格。</view>
+      
       <view class="hero-grid">
         <view class="hero-metric"><view class="metric-label">最新体重</view><view class="metric-value">{{ latestRecord ? latestRecord.weight : '--' }}</view><view class="metric-unit">kg</view></view>
         <view class="hero-metric"><view class="metric-label">最新 BMI</view><view class="metric-value">{{ latestRecord ? latestRecord.bmi : '--' }}</view><view class="metric-unit">指数</view></view>
@@ -14,7 +14,7 @@
     <view class="two-col">
       <view class="section-card half">
         <view class="section-title">体型目标进度</view>
-        <view class="kv-row"><text>当前体重</text><text>{{ profile.current_weight || '--' }} kg</text></view>
+        <view class="kv-row"><text>当前体重</text><text>{{ currentWeightForProgress || '--' }} kg</text></view>
         <view class="kv-row"><text>目标体重</text><text>{{ profile.target_weight || '--' }} kg</text></view>
         <view class="kv-row"><text>达成度</text><text>{{ goalProgress }}%</text></view>
         <view class="progress-bg"><view class="progress-bar" :style="{ width: goalProgress + '%' }"></view></view>
@@ -30,11 +30,23 @@
     </view>
 
     <view class="section-card">
-      <view class="section-head"><view class="section-title">趋势图</view><view class="tab-row"><text class="tab" :class="{active: chartMode==='weight'}" @click="chartMode='weight'">体重</text><text class="tab" :class="{active: chartMode==='body_fat'}" @click="chartMode='body_fat'">体脂估算</text><text class="tab" :class="{active: chartMode==='bmi'}" @click="chartMode='bmi'">BMI</text></view></view>
+      <view class="section-head">
+        <view class="section-title">趋势图</view>
+        <view class="tab-row">
+          <text class="tab" :class="{active: chartMode==='weight'}" @click="chartMode='weight'">体重</text>
+          <text class="tab" :class="{active: chartMode==='body_fat'}" @click="chartMode='body_fat'">体脂估算</text>
+          <text class="tab" :class="{active: chartMode==='bmi'}" @click="chartMode='bmi'">BMI</text>
+        </view>
+      </view>
       <view v-if="pointNodes.length < 2" class="empty-text">暂无足够数据绘制趋势图，请先添加 2 条以上健康记录。</view>
       <view v-else class="chart-box">
         <svg class="chart-svg" viewBox="0 0 690 240">
-          <defs><linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#4f46e5"></stop><stop offset="100%" stop-color="#06b6d4"></stop></linearGradient></defs>
+          <defs>
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4f46e5"></stop>
+              <stop offset="100%" stop-color="#06b6d4"></stop>
+            </linearGradient>
+          </defs>
           <polyline :points="chartAreaPoints" fill="rgba(79,70,229,0.08)" stroke="none"></polyline>
           <polyline :points="chartPoints" fill="none" stroke="url(#lineGradient)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
           <g v-for="(point, index) in pointNodes" :key="index">
@@ -74,7 +86,6 @@
 </template>
 
 <script>
-import { request } from '@/utils/request.js'
 import { getUserId } from '@/utils/session.js'
 import { getMyProfile } from '@/api/user.js'
 import { getRecordList, createRecord } from '@/api/records.js'
@@ -90,17 +101,29 @@ export default {
     }
   },
   computed: {
-    latestRecord() { return this.records.length ? this.records[0] : null },
-    recentCount() { return this.records.slice(0, 7).length },
+    latestRecord() {
+      return this.records.length ? this.records[0] : null
+    },
+    recentCount() {
+      return this.records.slice(0, 7).length
+    },
+    currentWeightForProgress() {
+      if (this.latestRecord && this.latestRecord.weight !== null && this.latestRecord.weight !== undefined) {
+        return Number(this.latestRecord.weight || 0)
+      }
+      return Number(this.profile.current_weight || 0)
+    },
     goalProgress() {
-      var current = Number(this.profile.current_weight || 0)
+      var current = this.currentWeightForProgress
       var target = Number(this.profile.target_weight || 0)
       if (!current || !target) return 0
       var diff = Math.abs(current - target)
       var baseline = Math.max(current, target)
       return Math.max(0, Math.min(100, Math.round((1 - diff / baseline) * 100)))
     },
-    weeklyRecords() { return this.records.slice(0, 7).reverse() },
+    weeklyRecords() {
+      return this.records.slice(0, 7).reverse()
+    },
     weeklyAvgWeight() {
       if (!this.weeklyRecords.length) return '--'
       var total = this.weeklyRecords.reduce((sum, item) => sum + Number(item.weight || 0), 0)
@@ -130,24 +153,54 @@ export default {
       if (bmi < 28) return '超重'
       return '肥胖风险'
     },
-    chartRecords() { return this.records.slice(0, 7).reverse() },
+    chartRecords() {
+      return this.records.slice(0, 7).reverse()
+    },
     pointNodes() {
       var list = this.chartRecords
       if (list.length < 2) return []
+
       var values = list.map(this.getChartValue)
-      var max = Math.max.apply(null, values)
-      var min = Math.min.apply(null, values)
+
+      var min = 0
+      var max = 0
+
+      if (this.chartMode === 'weight') {
+        min = 30
+        max = 120
+      } else if (this.chartMode === 'body_fat') {
+        min = 5
+        max = 45
+      } else if (this.chartMode === 'bmi') {
+        min = 15
+        max = 35
+      }
+
       var gap = max - min || 1
       var startX = 55, endX = 635, startY = 45, endY = 205
       var stepX = (endX - startX) / (list.length - 1)
+
       return list.map((item, index) => {
         var value = values[index]
         var x = startX + stepX * index
-        var y = endY - ((value - min) / gap) * (endY - startY)
-        return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), label: isNaN(value) ? '--' : value.toFixed(1), dateLabel: item.record_date ? item.record_date.slice(5) : '--' }
+
+        var normalized = (value - min) / gap
+        if (normalized < 0) normalized = 0
+        if (normalized > 1) normalized = 1
+
+        var y = endY - normalized * (endY - startY)
+
+        return {
+          x: Number(x.toFixed(2)),
+          y: Number(y.toFixed(2)),
+          label: isNaN(value) ? '--' : value.toFixed(1),
+          dateLabel: item.record_date ? item.record_date.slice(5) : '--'
+        }
       })
     },
-    chartPoints() { return this.pointNodes.map(item => item.x + ',' + item.y).join(' ') },
+    chartPoints() {
+      return this.pointNodes.map(item => item.x + ',' + item.y).join(' ')
+    },
     chartAreaPoints() {
       if (!this.pointNodes.length) return ''
       var first = this.pointNodes[0], last = this.pointNodes[this.pointNodes.length - 1]
@@ -172,21 +225,48 @@ export default {
     },
     loadProfile() {
       var that = this
-      getMyProfile(that.userId).then(function(data) { that.profile = data || {} }).catch(function(err) { console.log('profile error =>', err) })
+      getMyProfile(that.userId)
+        .then(function(data) {
+          that.profile = data || {}
+        })
+        .catch(function(err) {
+          console.log('profile error =>', err)
+        })
     },
     loadRecords() {
       var that = this
-      getRecordList(that.userId).then(function(data) { that.records = Array.isArray(data) ? data : [] }).catch(function(err) { console.log('records error =>', err) })
+      getRecordList(that.userId)
+        .then(function(data) {
+          that.records = Array.isArray(data) ? data : []
+        })
+        .catch(function(err) {
+          console.log('records error =>', err)
+        })
     },
     submitRecord() {
       var that = this
-      if (!that.form.weight) { uni.showToast({ title: '请输入体重', icon: 'none' }); return }
-      if (isNaN(Number(that.form.weight))) { uni.showToast({ title: '体重必须是数字', icon: 'none' }); return }
+      if (!that.form.weight) {
+        uni.showToast({ title: '请输入体重', icon: 'none' })
+        return
+      }
+      if (isNaN(Number(that.form.weight))) {
+        uni.showToast({ title: '体重必须是数字', icon: 'none' })
+        return
+      }
       var weight = Number(that.form.weight)
-      if (weight < 30 || weight > 200) { uni.showToast({ title: '体重请输入 30-200kg', icon: 'none' }); return }
-      createRecord({ user: that.userId, weight: weight, note: that.form.note || '' }).then(function() {
+      if (weight < 30 || weight > 200) {
+        uni.showToast({ title: '体重请输入 30-200kg', icon: 'none' })
+        return
+      }
+
+      createRecord({
+        user: that.userId,
+        weight: weight,
+        note: that.form.note || ''
+      }).then(function() {
         uni.showToast({ title: '记录已保存', icon: 'success' })
         that.form = { weight: '', note: '' }
+        that.loadProfile()
         that.loadRecords()
       }).catch(function(err) {
         uni.showToast({ title: err.message || '保存失败', icon: 'none' })

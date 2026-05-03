@@ -11,22 +11,20 @@ from apps.plans.models import RecommendationPlan, CheckIn
 
 try:
     from apps.discover.models import (
-        ChallengeEnrollment,
-        CourseFavorite,
-        ArticleFavorite,
-        PostLike,
+        ChallengeJoin,
+        TopicCourseFavorite,
+        KnowledgeArticleFavorite,
+        CommunityPostLike,
     )
 except Exception:  # pragma: no cover
-    ChallengeEnrollment = None
-    CourseFavorite = None
-    ArticleFavorite = None
-    PostLike = None
-
+    ChallengeJoin = None
+    TopicCourseFavorite = None
+    KnowledgeArticleFavorite = None
+    CommunityPostLike = None
 
 
 def api_ok(data=None, message='success'):
     return Response({'code': 0, 'message': message, 'data': data})
-
 
 
 def _safe_count(model, user):
@@ -38,14 +36,13 @@ def _safe_count(model, user):
         return 0
 
 
-
 def _recent_actions(user, limit=8):
     items = []
     model_specs = [
-        (ChallengeEnrollment, '报名挑战', 'challenge'),
-        (CourseFavorite, '收藏课程', 'course'),
-        (ArticleFavorite, '收藏文章', 'article'),
-        (PostLike, '点赞动态', 'post'),
+        (ChallengeJoin, '报名挑战', 'challenge'),
+        (TopicCourseFavorite, '收藏课程', 'course'),
+        (KnowledgeArticleFavorite, '收藏文章', 'article'),
+        (CommunityPostLike, '点赞动态', 'post'),
     ]
     for model, label, attr in model_specs:
         if model is None:
@@ -67,7 +64,6 @@ def _recent_actions(user, limit=8):
     return items[:limit]
 
 
-
 def _calculate_level(points):
     if points < 50:
         return 1, '新手启动'
@@ -78,7 +74,6 @@ def _calculate_level(points):
     if points < 500:
         return 4, '稳定进阶'
     return 5, '训练达人'
-
 
 
 def _badges(summary):
@@ -116,7 +111,6 @@ def _badges(summary):
     ]
 
 
-
 def _streak_days(user):
     try:
         dates = list(
@@ -148,25 +142,34 @@ def _streak_days(user):
     return streak
 
 
-
 def _growth_summary(user):
-    challenge_joined_count = _safe_count(ChallengeEnrollment, user)
-    course_favorite_count = _safe_count(CourseFavorite, user)
-    article_favorite_count = _safe_count(ArticleFavorite, user)
-    post_like_count = _safe_count(PostLike, user)
+    challenge_joined_count = _safe_count(ChallengeJoin, user)
+    course_favorite_count = _safe_count(TopicCourseFavorite, user)
+    article_favorite_count = _safe_count(KnowledgeArticleFavorite, user)
+    post_like_count = _safe_count(CommunityPostLike, user)
     checkin_count = CheckIn.objects.filter(user=user).count()
+
     interaction_total = (
         challenge_joined_count
         + course_favorite_count
         + article_favorite_count
         + post_like_count
     )
-    points = checkin_count * 5 + challenge_joined_count * 3 + course_favorite_count + article_favorite_count + post_like_count
+
+    points = (
+        checkin_count * 5
+        + challenge_joined_count * 3
+        + course_favorite_count
+        + article_favorite_count
+        + post_like_count
+    )
+
     level, level_name = _calculate_level(points)
     current_floor = 0 if level == 1 else [0, 50, 150, 300, 500][level - 1]
     next_ceiling = [50, 150, 300, 500, 800][level - 1]
     progress = min(100, int(((points - current_floor) / max(1, next_ceiling - current_floor)) * 100))
     stage = '内容推荐' if interaction_total < 6 else '内容推荐 + 协同过滤增强'
+
     summary = {
         'challenge_joined_count': challenge_joined_count,
         'course_favorite_count': course_favorite_count,
@@ -205,13 +208,21 @@ class MeDashboardView(APIView):
 
         goal_progress = 0
         quick_tags = []
+
         if profile:
-            current_weight = float(profile.current_weight or 0)
+            latest_weight = None
+            if latest_record and latest_record.weight is not None:
+                latest_weight = float(latest_record.weight)
+            else:
+                latest_weight = float(profile.current_weight or 0)
+
             target_weight = float(profile.target_weight or 0)
-            if current_weight and target_weight:
-                diff = abs(current_weight - target_weight)
-                baseline = max(current_weight, target_weight)
+
+            if latest_weight and target_weight:
+                diff = abs(latest_weight - target_weight)
+                baseline = max(latest_weight, target_weight)
                 goal_progress = max(0, min(100, round((1 - diff / baseline) * 100)))
+
             for part in [profile.exercise_preference, profile.diet_preference]:
                 if not part:
                     continue
@@ -233,6 +244,7 @@ class MeDashboardView(APIView):
                 'suggestion': latest_plan.suggestion,
             } if latest_plan else None,
             'goal_progress': goal_progress,
+            'current_weight_for_progress': latest_record.weight if latest_record else (profile.current_weight if profile else None),
             'streak_days': growth['streak_days'],
             'recent_record_count': HealthRecord.objects.filter(user=user).count(),
             'engine_stage': growth['stage'],

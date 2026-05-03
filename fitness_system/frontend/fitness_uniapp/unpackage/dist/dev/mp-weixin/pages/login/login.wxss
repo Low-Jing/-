@@ -1,0 +1,101 @@
+
+.page.data-v-b237504c {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+  padding: 48rpx 28rpx;
+  box-sizing: border-box;
+}
+.hero.data-v-b237504c {
+  padding: 24rpx 8rpx 40rpx;
+}
+.hero-badge.data-v-b237504c {
+  display: inline-block;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
+  font-size: 24rpx;
+  margin-bottom: 18rpx;
+}
+.hero-title.data-v-b237504c {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+}
+.hero-subtitle.data-v-b237504c {
+  margin-top: 14rpx;
+  font-size: 26rpx;
+  color: #64748b;
+  line-height: 1.7;
+}
+.card.data-v-b237504c {
+  background: #ffffff;
+  border-radius: 28rpx;
+  padding: 36rpx 28rpx;
+  box-shadow: 0 16rpx 50rpx rgba(15, 23, 42, 0.08);
+}
+.tabs.data-v-b237504c {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 999rpx;
+  padding: 8rpx;
+  margin-bottom: 28rpx;
+}
+.tab.data-v-b237504c {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 999rpx;
+  color: #64748b;
+  font-size: 28rpx;
+}
+.tab.active.data-v-b237504c {
+  background: #4f46e5;
+  color: #ffffff;
+  font-weight: 600;
+}
+.section-title.data-v-b237504c {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 28rpx;
+}
+.form-item.data-v-b237504c {
+  margin-bottom: 22rpx;
+}
+.label.data-v-b237504c {
+  display: block;
+  font-size: 26rpx;
+  color: #334155;
+  margin-bottom: 12rpx;
+}
+.input.data-v-b237504c,
+.picker-value.data-v-b237504c {
+  width: 100%;
+  min-height: 88rpx;
+  background: #f8fafc;
+  border: 2rpx solid #e2e8f0;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+}
+.btn.data-v-b237504c {
+  height: 92rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-top: 20rpx;
+}
+.btn-primary.data-v-b237504c {
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  color: #ffffff;
+}
+

@@ -136,12 +136,12 @@ def build_personalized_pick(user, context):
         if kw and kw not in dedup:
             dedup.append(kw)
     reasons = [
-        '先依据目标、训练偏好和饮食偏好生成内容推荐。',
-        '当发现页互动增多后，会把报名、收藏、点赞作为增强信号。',
+        '你推荐适合的训练、饮食和挑战内容，帮你轻松开启健康生活',
+        '想减脂、塑形还是养成习惯？这里为你整理了适配不同目标的训练与饮食内容。',
     ]
     if context['joined_ids'] or context['course_favorite_ids'] or context['article_favorite_ids'] or context['post_liked_ids']:
-        reasons.append('你已经产生行为数据，后续推荐会逐渐向“内容推荐 + 协同过滤增强”过渡。')
-    return {'title': '为你精选', 'keywords': dedup[:6] if dedup else ['减脂', '轻食', '快走'], 'reasons': reasons}
+        reasons.append('从日常快走，到专业课程，找到最适合你的节奏，一步步变更好。')
+    return {'title': '', 'keywords': dedup[:6] if dedup else ['减脂', '轻食', '快走'], 'reasons': reasons}
 
 
 class DiscoverHomeView(APIView):

@@ -3,15 +3,20 @@
     <view class="hero-card">
       <view class="hero-tag">内容生态与社区板块</view>
       <view class="hero-title">发现</view>
-      <view class="hero-desc">去掉搜索，强化运营位、课程详情、知识正文和社区互动完整度，让发现页更像真正的内容型应用。</view>
+      
     </view>
 
     <swiper class="banner-swiper" circular autoplay indicator-dots>
       <swiper-item v-for="(item, index) in banners" :key="index">
         <view class="banner-card">
-          <view class="banner-badge">{{ item.badge }}</view>
-          <view class="banner-title">{{ item.title }}</view>
-          <view class="banner-subtitle">{{ item.subtitle }}</view>
+          <!-- 背景图片 -->
+          <image class="banner-img" :src="item.img" mode="widthFix"></image>
+          <!-- 文字悬浮层 -->
+          <view class="banner-text-wrap">
+            <view class="banner-badge">{{ item.badge }}</view>
+            <view class="banner-title">{{ item.title }}</view>
+            <view class="banner-subtitle">{{ item.subtitle }}</view>
+          </view>
         </view>
       </swiper-item>
     </swiper>
@@ -121,8 +126,37 @@ import { getDiscoverHome, toggleChallengeJoin, toggleCourseFavorite, toggleArtic
 export default {
   data() {
     return {
-      userId: '', banners: [], channels: [], editorPick: {}, challenges: [], topics: [], articles: [], feeds: [], activeTab: 'all',
-      detailVisible: false, detailType: '', detailItem: {}
+      userId: '',
+      banners: [
+        {
+          img: "/static/banner1.jpg",
+          badge: "健身生活",
+          title: "适度运动，遇见轻盈与自在",
+          subtitle: "Moderate exercise, meet lightness and ease"
+        },
+        {
+          img: "/static/banner2.jpg",
+          badge: "减脂塑形",
+          title: "减脂不停，体态常青",
+          subtitle: "Keep losing fat, stay in perfect shape"
+        },
+        {
+          img: "/static/banner3.jpg",
+          badge: "自律蜕变",
+          title: "以汗水为刃，雕琢理想身形",
+          subtitle: "Take sweat as the blade, carve your ideal figure"
+        }
+      ],
+      channels: [],
+      editorPick: {},
+      challenges: [],
+      topics: [],
+      articles: [],
+      feeds: [],
+      activeTab: 'all',
+      detailVisible: false,
+      detailType: '',
+      detailItem: {}
     }
   },
   onShow() {
@@ -133,7 +167,6 @@ export default {
     loadDiscover() {
       var that = this
       getDiscoverHome(that.userId).then(function(data) {
-        that.banners = data.banners || []
         that.channels = data.channels || []
         that.editorPick = data.editor_pick || {}
         that.challenges = data.challenges || []
@@ -194,15 +227,21 @@ export default {
 
 <style>
 .container { padding: 24rpx; background: #f3f6fb; min-height: 100vh; }
-.hero-card, .banner-card { background: linear-gradient(135deg, #4f46e5, #22c1dc); border-radius: 28rpx; padding: 28rpx; color: #fff; }
-.hero-card { margin-bottom: 24rpx; }
+.hero-card, .banner-card { border-radius: 28rpx; padding: 28rpx; color: #fff; }
+.hero-card { margin-bottom: 24rpx; background: linear-gradient(135deg, #4f46e5, #22c1dc); }
 .hero-tag { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 14rpx; }
 .hero-title { font-size: 42rpx; font-weight: 700; }
 .hero-desc { font-size: 24rpx; margin-top: 10rpx; line-height: 1.7; }
+
+/* 轮播banner改成图片布局 */
 .banner-swiper { height: 220rpx; margin-bottom: 24rpx; }
+.banner-card { position: relative; width: 100%; height: 220rpx; padding: 0; overflow: hidden; }
+.banner-img { width: 100%; height: 100%; object-fit: cover; }
+.banner-text-wrap { position: absolute; left: 28rpx; top: 28rpx; }
 .banner-badge { display: inline-block; padding: 8rpx 16rpx; border-radius: 999rpx; background: rgba(255,255,255,0.18); font-size: 22rpx; margin-bottom: 18rpx; }
 .banner-title { font-size: 40rpx; font-weight: 700; }
 .banner-subtitle { margin-top: 10rpx; font-size: 24rpx; color: #e0f2fe; }
+
 .section-card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx; box-shadow: 0 10rpx 24rpx rgba(15,23,42,0.05); }
 .section-head { display: flex; justify-content: space-between; align-items: center; }
 .section-title { font-size: 34rpx; font-weight: 700; margin-bottom: 16rpx; }

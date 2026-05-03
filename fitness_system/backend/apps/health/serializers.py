@@ -2,6 +2,10 @@ from rest_framework import serializers
 from .models import HealthRecord
 
 
+from rest_framework import serializers
+from .models import HealthRecord
+
+
 class HealthRecordSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
 
@@ -36,7 +40,6 @@ class HealthRecordSerializer(serializers.ModelSerializer):
             bmr = round(10 * weight + 6.25 * height_cm - 5 * profile.age - 161, 2)
             sex_flag = 0
 
-        # 体脂率无法仅靠身高和体重精确测量，这里使用 BMI + 年龄 + 性别进行估算。
         estimated_body_fat = round((1.20 * bmi) + (0.23 * profile.age) - (10.8 * sex_flag) - 5.4, 2)
         if estimated_body_fat < 5:
             estimated_body_fat = 5.0
@@ -46,4 +49,10 @@ class HealthRecordSerializer(serializers.ModelSerializer):
         validated_data['body_fat'] = estimated_body_fat
         validated_data['bmi'] = bmi
         validated_data['bmr'] = bmr
-        return super().create(validated_data)
+
+        instance = super().create(validated_data)
+
+        profile.current_weight = weight
+        profile.save(update_fields=['current_weight', 'updated_at'])
+
+        return instance

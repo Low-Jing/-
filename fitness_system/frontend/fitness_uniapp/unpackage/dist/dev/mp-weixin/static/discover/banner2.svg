@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" rx="36" fill="url(#g2)"/>
+  <rect x="760" y="84" width="290" height="210" rx="28" fill="rgba(255,255,255,0.10)"/>
+  <rect x="820" y="330" width="220" height="70" rx="18" fill="rgba(255,255,255,0.12)"/>
+  <text x="70" y="165" fill="#ffffff" font-size="54" font-family="Arial, PingFang SC, Microsoft YaHei" font-weight="700">一周燃脂训练专栏</text>
+  <text x="70" y="235" fill="#dbeafe" font-size="26" font-family="Arial, PingFang SC, Microsoft YaHei">围绕跑步、快走、HIIT 与轻食方案做连续推荐</text>
+  <text x="70" y="300" fill="#ffffff" font-size="24" font-family="Arial, PingFang SC, Microsoft YaHei">TRAINING · PLAN CENTER</text>
+</svg>
